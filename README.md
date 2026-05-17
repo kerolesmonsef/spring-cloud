@@ -1,92 +1,81 @@
-# Spring Cloud Samples
+# Spring Cloud Config Server
 
-This repository contains Spring Cloud pattern samples.
+## What is Config Server?
 
-## Patterns
+A centralized service that stores and serves **externalized configuration** (`.properties`/`.yml`) to all microservices in a system. Instead of each service having its own config file, they all fetch config from one place.
 
-### 1. Config Server and Config Client
-
-Config Server is a central configuration management solution that provides externalized configuration for distributed systems.
-
-**Architecture:**
 ```
-┌─────────────┐         ┌──────────────┐
-│ Config      │ ──────▶ │ Config       │
-│ Server      │         │ Client       │
-│ (8888)      │         │ (8080)       │
-└─────────────┘         └──────────────┘
-```
-
-#### Config Server
-
-**Features:**
-- Centralized configuration management
-- Supports multiple backends (git, svn, vault, etc.)
-- Provides RESTful API for configuration
-- Supports configuration encryption
-
-**Build:** `ConfigServer/build.gradle`
-- Spring Boot 4.0.6
-- Spring Cloud 2025.1.1
-
-**Run:**
-```bash
-cd ConfigServer
-./gradlew bootRun
+┌─────────────┐     HTTP     ┌──────────────┐     ┌──────────┐
+│  Config     │◄────────────►│  Config      │────►│ Git      │
+│  Client A   │              │  Server      │     │ Backend  │
+├─────────────┤              │  :8888       │     └──────────┘
+│  Config     │              └──────────────┘
+│  Client B   │
+├─────────────┤
+│  Config     │
+│  Client C   │
+└─────────────┘
 ```
 
-**Default Port:** 8888
+## Problem It Solves
 
-**Configuration:**
-```properties
-spring.application.name=ConfigServer
-server.port=8888
-spring.cloud.config.server.git.uri=https://github.com/your-repo/config-repo
+**Without Config Server** — config is scattered everywhere:
+
+```
+┌──────────┐  app.properties     ┌──────────┐  app.properties
+│ Service A│  (hardcoded per env)│ Service B│  (hardcoded per env)
+├──────────┤                     ├──────────┤
+│ Service C│  app.properties     │ Service D│  app.properties
+└──────────┘  (hardcoded per env)└──────────┘  (hardcoded per env)
 ```
 
-#### Config Client
+**Issues:**
+- Restart every service to change a property
+- Can't rotate secrets without redeploy
+- No audit trail — who changed what, where
+- Each service needs its own env-specific build
 
-To be added - will demonstrate how to connect to Config Server and consume externalized configuration.
+**With Config Server** — single source of truth:
 
-**Dependencies:**
+```
+     ┌─────────────────────────────────────┐
+     │         Config Server :8888         │
+     │  (reads from Git backend)           │
+     └──────────┬──────────────────────────┘
+                │
+    ┌───────────┼───────────┬───────────┐
+    ▼           ▼           ▼           ▼
+┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐
+│  App  │  │  App  │  │  App  │  │  App  │
+│   A   │  │   B   │  │   C   │  │   D   │
+└───────┘  └───────┘  └───────┘  └───────┘
+```
+
+**Fixes:**
+- Change config **once** → all services pick it up on restart (or with `/actuator/refresh`)
+- Rotate secrets without touching/deploying code
+- Config is versioned (Git history = audit trail)
+- Same artifact across all environments — just point at different Git branches/profiles
+
+## How to Enable in Spring Boot
+
+### 1. Add dependency (`build.gradle`)
 ```gradle
 implementation 'org.springframework.cloud:spring-cloud-starter-config'
 ```
 
-**Configuration:**
+### 2. Add bootstrap or application property
 ```properties
 spring.config.import=optional:configserver:http://localhost:8888
-spring.application.name=your-app-name
+spring.application.name=my-service
 ```
 
-## Project Structure
 
-```
-springCload/
-├── ConfigServer/          # Config Server module
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/     # Java source
-│   │   │   └── resources/
-│   │   └── test/
-│   ├── build.gradle
-│   └── gradle/
-└── (more modules to be added)
-```
+## When to Use
 
-## Requirements
-
-- Java 17+
-- Gradle (wrapper included)
-
-## Quick Start
-
-1. Clone the repository
-2. Start Config Server: `cd ConfigServer && ./gradlew bootRun`
-3. Config Server runs on http://localhost:8888
-4. Access health endpoint: http://localhost:8888/actuator/health
-
-## Documentation
-
-- [Spring Cloud Config Docs](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/)
-- [Spring Boot Docs](https://docs.spring.io/spring-boot/docs/current/reference/)
+| Scenario | Use Config Server? |
+|----------|-------------------|
+| 1–2 microservices | Overkill — local files are fine |
+| 3+ microservices | ✅ Yes — centralize management |
+| Need secret rotation | ✅ Yes — change in Git, redeploy not needed |
+| Kubernetes/Cloud | ✅ Yes — pairs with native cloud config |

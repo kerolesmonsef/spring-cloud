@@ -5,12 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
-      <change afterPath="$PROJECT_DIR$/ConfigServer/config-data/mon.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigClient/src/main/java/com/keroles/configclient/DatabaseConfigPrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigClient/src/main/java/com/keroles/configclient/DatabaseConfigPrinter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/database-dev.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/database.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigServer/config-data/application-dev.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/.gitattributes" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/application-dev.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/gradlew" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/gradlew.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/settings.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/java/com/keroles/configserver/ConfigServerApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/java/com/keroles/configserver/TestController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/src/test/java/com/keroles/configserver/ConfigServerApplicationTests.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -150,7 +161,7 @@
       <recent name="$PROJECT_DIR$/configServer/config-data" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.ConfigServerApplication">
+  <component name="RunManager" selected="Spring Boot.ConfigClientApplication">
     <configuration name="generated-requests | #2" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#2" index="2" runType="Run single request">
       <method v="2" />
     </configuration>
@@ -210,7 +221,7 @@
       <workItem from="1778965715150" duration="14000" />
       <workItem from="1778965772108" duration="43000" />
       <workItem from="1778965852753" duration="21000" />
-      <workItem from="1778965889257" duration="5391000" />
+      <workItem from="1778965889257" duration="9148000" />
     </task>
     <task id="LOCAL-00001" summary="Add .gitignore, update application properties, and implement TestController">
       <option name="closed" value="true" />
@@ -228,7 +239,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778981249160</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
+      <option name="closed" value="true" />
+      <created>1778982017766</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1778982017766</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
