@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="">
+    <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="Add .gitignore, update application properties, and implement TestController">
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,6 +30,9 @@
     </selectedModels>
   </component>
   <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$/ConfigClient">
+      <ProjectState />
+    </projectState>
     <projectState path="$PROJECT_DIR$/ConfigServer">
       <ProjectState />
     </projectState>
@@ -110,6 +115,8 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Application.ConfigServerApplication.executor": "Debug",
+    "DELOMBOK_PRE_COMMIT": "false",
+    "Gradle.Build ConfigClient.executor": "Run",
     "Gradle.Build ConfigServer.executor": "Run",
     "HTTP Request.generated-requests | #2.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
@@ -119,6 +126,7 @@
     "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.ConfigClientApplication.executor": "Debug",
     "Spring Boot.ConfigServerApplication.executor": "Debug",
     "deletionFromPopupRequiresConfirmation": "false",
     "git-widget-placeholder": "main",
@@ -139,8 +147,11 @@
       <recent name="$PROJECT_DIR$/configServer/config-data" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.ConfigServerApplication">
+  <component name="RunManager" selected="Spring Boot.ConfigClientApplication">
     <configuration name="generated-requests | #2" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#2" index="2" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="generated-requests | #3" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#3" index="3" runType="Run single request">
       <method v="2" />
     </configuration>
     <configuration default="true" type="JetRunConfigurationType">
@@ -154,6 +165,13 @@
       <option name="filePath" />
       <method v="2" />
     </configuration>
+    <configuration name="ConfigClientApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ConfigClient.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.keroles.configclient.ConfigClientApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="ConfigServerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="ConfigServer.main" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.keroles.configserver.ConfigServerApplication" />
@@ -163,6 +181,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="HTTP Request.generated-requests | #3" />
         <item itemvalue="HTTP Request.generated-requests | #2" />
       </list>
     </recent_temporary>
@@ -188,12 +207,25 @@
       <workItem from="1778965715150" duration="14000" />
       <workItem from="1778965772108" duration="43000" />
       <workItem from="1778965852753" duration="21000" />
-      <workItem from="1778965889257" duration="2688000" />
+      <workItem from="1778965889257" duration="4566000" />
     </task>
+    <task id="LOCAL-00001" summary="Add .gitignore, update application properties, and implement TestController">
+      <option name="closed" value="true" />
+      <created>1778979119974</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1778979119974</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add .gitignore, update application properties, and implement TestController" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add .gitignore, update application properties, and implement TestController" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
