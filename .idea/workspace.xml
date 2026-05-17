@@ -4,11 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="Add .gitignore, update application properties, and implement TestController">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
+      <change afterPath="$PROJECT_DIR$/ConfigServer/config-data/mon.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigClient/src/main/java/com/keroles/configclient/DatabaseConfigPrinter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigClient/src/main/java/com/keroles/configclient/DatabaseConfigPrinter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/database-dev.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/database.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigServer/config-data/application-dev.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,6 +121,7 @@
     "Gradle.Build ConfigClient.executor": "Run",
     "Gradle.Build ConfigServer.executor": "Run",
     "HTTP Request.generated-requests | #2.executor": "Run",
+    "HTTP Request.generated-requests | #3.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RequestMappingsPanelOrder0": "0",
     "RequestMappingsPanelOrder1": "1",
@@ -147,7 +150,7 @@
       <recent name="$PROJECT_DIR$/configServer/config-data" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.ConfigClientApplication">
+  <component name="RunManager" selected="Spring Boot.ConfigServerApplication">
     <configuration name="generated-requests | #2" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#2" index="2" runType="Run single request">
       <method v="2" />
     </configuration>
@@ -207,7 +210,7 @@
       <workItem from="1778965715150" duration="14000" />
       <workItem from="1778965772108" duration="43000" />
       <workItem from="1778965852753" duration="21000" />
-      <workItem from="1778965889257" duration="4566000" />
+      <workItem from="1778965889257" duration="5391000" />
     </task>
     <task id="LOCAL-00001" summary="Add .gitignore, update application properties, and implement TestController">
       <option name="closed" value="true" />
@@ -217,15 +220,27 @@
       <option name="project" value="LOCAL" />
       <updated>1778979119974</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
+      <option name="closed" value="true" />
+      <created>1778981249160</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1778981249160</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
+    <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="Add .gitignore, update application properties, and implement TestController" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add .gitignore, update application properties, and implement TestController" />
+    <MESSAGE value="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller" />
+    <option name="LAST_COMMIT_MESSAGE" value="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller" />
+    <option name="NON_MODAL_COMMIT_POSTPONE_SLOW_CHECKS" value="false" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

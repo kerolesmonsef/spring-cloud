@@ -3,10 +3,11 @@ package com.keroles.configclient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController
+@Component
 public class DatabaseConfigPrinter implements CommandLineRunner {
 
     @Value("${database.username}")
@@ -15,10 +16,6 @@ public class DatabaseConfigPrinter implements CommandLineRunner {
     @Value("${database.password}")
     private String databasePassword;
 
-    @GetMapping("/db-config")
-    public String getDatabaseConfig() {
-        return "Database User: " + databaseUser + ", Database Password: " + databasePassword;
-    }
 
     @Override
     public void run(String... args) {
