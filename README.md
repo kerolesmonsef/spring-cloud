@@ -21,13 +21,7 @@ A centralized service that stores and serves **externalized configuration** (`.p
 
 **Without Config Server** — config is scattered everywhere:
 
-```
-┌──────────┐  app.properties     ┌──────────┐  app.properties
-│ Service A│  (hardcoded per env)│ Service B│  (hardcoded per env)
-├──────────┤                     ├──────────┤
-│ Service C│  app.properties     │ Service D│  app.properties
-└──────────┘  (hardcoded per env)└──────────┘  (hardcoded per env)
-```
+
 
 **Issues:**
 - Restart every service to change a property
@@ -59,15 +53,8 @@ A centralized service that stores and serves **externalized configuration** (`.p
 
 ## How to Enable in Spring Boot
 
-### 1. Add dependency (`build.gradle`)
-```gradle
-implementation 'org.springframework.cloud:spring-cloud-starter-config'
-```
-
-### 2. Add bootstrap or application property
 ```properties
 spring.config.import=optional:configserver:http://localhost:8888
-spring.application.name=my-service
 ```
 
 

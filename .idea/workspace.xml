@@ -6,21 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="8b5a1d5d-8f0c-410e-bda9-5649094e8727" name="Changes" comment="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/.gitattributes" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/build.gradle" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/application-dev.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/config-data/application.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/gradlew" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/gradlew.bat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/settings.gradle" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/java/com/keroles/configserver/ConfigServerApplication.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/java/com/keroles/configserver/TestController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/main/resources/application.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConfigServer/src/test/java/com/keroles/configserver/ConfigServerApplicationTests.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -47,6 +36,15 @@
       <ProjectState />
     </projectState>
     <projectState path="$PROJECT_DIR$/ConfigServer">
+      <ProjectState />
+    </projectState>
+    <projectState path="$PROJECT_DIR$/LoadBalancer">
+      <ProjectState />
+    </projectState>
+    <projectState path="$PROJECT_DIR$/LoadBalancer/LoadBalancerService1">
+      <ProjectState />
+    </projectState>
+    <projectState path="$PROJECT_DIR$/LoadBalancer/LoadBalancerService2">
       <ProjectState />
     </projectState>
     <projectState path="$PROJECT_DIR$/clientConfig">
@@ -144,7 +142,7 @@
     "Spring Boot.ConfigServerApplication.executor": "Debug",
     "deletionFromPopupRequiresConfirmation": "false",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "/mnt/2427cce8-dbbb-44b3-bd3b-87c263acaf9e/java_projects/springCload/ConfigServer/config-data",
+    "last_opened_file_path": "/home/kero/.config/opencode/opencode.json",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -152,7 +150,8 @@
     "nodejs_package_manager_path": "npm",
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0"
+    "project.structure.side.proportion": "0.0",
+    "run.configurations.included.in.services": "true"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -160,6 +159,16 @@
       <recent name="$PROJECT_DIR$/ConfigServer/config-data" />
       <recent name="$PROJECT_DIR$/configServer/config-data" />
     </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationTypes">
+      <set>
+        <option value="KtorApplicationConfigurationType" />
+        <option value="MicronautRunConfigurationType" />
+        <option value="QuarkusRunConfigurationType" />
+        <option value="SpringBootApplicationConfigurationType" />
+      </set>
+    </option>
   </component>
   <component name="RunManager" selected="Spring Boot.ConfigClientApplication">
     <configuration name="generated-requests | #2" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#2" index="2" runType="Run single request">
@@ -193,6 +202,27 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="LoadBalancerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="LoadBalancer.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.keroles.loadbalancer.LoadBalancerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="LoadBalancerService1Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="LoadBalancerService1.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.keroles.loadbalancerservice1.LoadBalancerService1Application" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="LoadBalancerService2Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="LoadBalancerService2.main" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.keroles.loadbalancerservice2.LoadBalancerService2Application" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="HTTP Request.generated-requests | #3" />
@@ -221,7 +251,7 @@
       <workItem from="1778965715150" duration="14000" />
       <workItem from="1778965772108" duration="43000" />
       <workItem from="1778965852753" duration="21000" />
-      <workItem from="1778965889257" duration="9148000" />
+      <workItem from="1778965889257" duration="14205000" />
     </task>
     <task id="LOCAL-00001" summary="Add .gitignore, update application properties, and implement TestController">
       <option name="closed" value="true" />
@@ -247,7 +277,23 @@
       <option name="project" value="LOCAL" />
       <updated>1778982017766</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
+      <option name="closed" value="true" />
+      <created>1779016500781</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1779016500781</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Initialize ConfigClient project with Gradle, add application properties, and implement basic REST controller">
+      <option name="closed" value="true" />
+      <created>1779016506150</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1779016506150</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

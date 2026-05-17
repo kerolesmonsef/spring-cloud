@@ -4,6 +4,7 @@
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="web" url="file://$PROJECT_DIR$/ConfigClient" />
     <file type="web" url="file://$PROJECT_DIR$/ConfigServer" />
+    <file type="web" url="file://$PROJECT_DIR$/LoadBalancer" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="graalvm-21" project-jdk-type="JavaSDK" />
 </project>
