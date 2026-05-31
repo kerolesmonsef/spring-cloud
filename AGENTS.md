@@ -32,9 +32,11 @@
   - `cd LoadBalancer/LoadBalancerService1 && ./gradlew bootRun`
   - `cd LoadBalancer/LoadBalancerService2 && ./gradlew bootRun`
   - `cd OpenFeign && ./gradlew bootRun`
+  - `cd ServiceDescovery && ./gradlew bootRun`
 - Run tests from a module directory:
   - `cd ConfigServer && ./gradlew test`
   - `cd OpenFeign && ./gradlew test`
+  - `cd ServiceDescovery && ./gradlew test`
 - Committed tests are Spring context smoke tests in `ConfigServer/src/test/java/com/keroles/configserver/ConfigServerApplicationTests.java` and `OpenFeign/src/test/java/com/keroles/openfeign/OpenFeignApplicationTests.java`.
 
 ---
@@ -57,14 +59,16 @@
 >   corresponding `application.properties` file before committing.
 > - Ports are first-come-first-served; if two PRs race, the one merged last must re-assign.
 
-| Port | Module / Service         | `application.properties` path (from repo root)                                              |
-|------|--------------------------|----------------------------------------------------------------------------------------------|
-| 8888 | ConfigServer             | [`ConfigServer/src/main/resources/application.properties`](ConfigServer/src/main/resources/application.properties) |
-| 8090 | ConfigClient             | [`ConfigClient/src/main/resources/application.properties`](ConfigClient/src/main/resources/application.properties) |
-| 8080 | LoadBalancer (gateway)   | [`LoadBalancer/src/main/resources/application.properties`](LoadBalancer/src/main/resources/application.properties) |
-| 8001 | LoadBalancerService1     | [`LoadBalancer/LoadBalancerService1/src/main/resources/application.properties`](LoadBalancer/LoadBalancerService1/src/main/resources/application.properties) |
-| 8002 | LoadBalancerService2     | [`LoadBalancer/LoadBalancerService2/src/main/resources/application.properties`](LoadBalancer/LoadBalancerService2/src/main/resources/application.properties) |
-| 8091 | OpenFeign                | [`OpenFeign/src/main/resources/application.properties`](OpenFeign/src/main/resources/application.properties) |
+| Port | Module / Service                 | `application.properties` path (from repo root)                                              |
+|------|----------------------------------|----------------------------------------------------------------------------------------------|
+| 8888 | ConfigServer                     | [`ConfigServer/src/main/resources/application.properties`](ConfigServer/src/main/resources/application.properties) |
+| 8090 | ConfigClient                     | [`ConfigClient/src/main/resources/application.properties`](ConfigClient/src/main/resources/application.properties) |
+| 8080 | LoadBalancer (gateway)           | [`LoadBalancer/src/main/resources/application.properties`](LoadBalancer/src/main/resources/application.properties) |
+| 8001 | LoadBalancerService1             | [`LoadBalancer/LoadBalancerService1/src/main/resources/application.properties`](LoadBalancer/LoadBalancerService1/src/main/resources/application.properties) |
+| 8002 | LoadBalancerService2             | [`LoadBalancer/LoadBalancerService2/src/main/resources/application.properties`](LoadBalancer/LoadBalancerService2/src/main/resources/application.properties) |
+| 8091 | OpenFeign                        | [`OpenFeign/src/main/resources/application.properties`](OpenFeign/src/main/resources/application.properties) |
+| 8761 | ServiceDescovery (Eureka Server) | [`ServiceDescovery/src/main/resources/application.properties`](ServiceDescovery/src/main/resources/application.properties) |
+| 8003 | SSO                              | [`SSO/src/main/resources/application.properties`](SSO/src/main/resources/application.properties) |
 
 > **Next available port suggestion:** `8003` (for additional back-end instances) or `8092+` (for additional client-facing services).
 
