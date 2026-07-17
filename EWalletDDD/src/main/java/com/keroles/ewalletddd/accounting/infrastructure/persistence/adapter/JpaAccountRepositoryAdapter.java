@@ -41,10 +41,15 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
 
     @Override
     public void save(Account account) {
-        AccountJpaEntity row = jpa.findById(account.id().value())
-                .orElseGet(AccountJpaEntity::new);   // truly new aggregate -> INSERT
+        AccountJpaEntity row = (account.id() == null)
+                ? new AccountJpaEntity()             // new aggregate -> INSERT, DB generates id
+                : jpa.findById(account.id().value())
+                      .orElseThrow(() -> new IllegalStateException("Account row vanished: " + account.id().value()));
         // getReferenceById = proxy holding only the id; sets FK without SELECTing the user
         AccountMapper.copyOnto(account, row, userJpa.getReferenceById(account.userId().value()));
-        jpa.save(row);
+        AccountJpaEntity saved = jpa.save(row);
+        if (account.id() == null) {
+            account.assignId(new AccountId(saved.getId())); // hand the DB-born identity back to the aggregate
+        }
     }
 }

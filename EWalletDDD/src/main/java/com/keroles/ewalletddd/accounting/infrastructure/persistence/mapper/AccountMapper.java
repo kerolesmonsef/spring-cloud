@@ -28,7 +28,7 @@ public final class AccountMapper {
      * userRef: reference proxy for the FK association — caller supplies it, no user SELECT happens.
      */
     public static void copyOnto(Account account, AccountJpaEntity row, UserJpaEntity userRef) {
-        row.setId(account.id().value());
+        // id NOT copied — auto-increment, owned by the DB
         row.setUser(userRef);
         row.setCurrency(account.currency().getCurrencyCode());
         row.setBalance(account.balance().amount());

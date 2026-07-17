@@ -25,9 +25,13 @@ public class JpaUserRepositoryAdapter implements UserRepository {
 
     @Override
     public void save(User user) {
-        UserJpaEntity row = jpa.findById(user.id().value()).orElseGet(UserJpaEntity::new);
-        row.setId(user.id().value());
+        UserJpaEntity row = (user.id() == null)
+                ? new UserJpaEntity()
+                : jpa.findById(user.id().value()).orElseGet(UserJpaEntity::new);
         row.setCreatedAt(user.createdAt());
-        jpa.save(row);
+        UserJpaEntity saved = jpa.save(row);
+        if (user.id() == null) {
+            user.assignId(new UserId(saved.getId()));
+        }
     }
 }

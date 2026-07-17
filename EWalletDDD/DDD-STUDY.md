@@ -63,7 +63,8 @@ com.keroles.ewalletddd/
 ```
 
 Notes:
-- `openAccount(userId?, currency)`: userId null -> registers new (minimal) User + account; userId given -> must exist. `accounts.user_id` is a real FK to `users` (JPA: lazy @ManyToOne only for the constraint + read-only mirror `user_id` column for mapping; adapter uses `getReferenceById` so no user SELECT on save). UUID columns are char(36) via @JdbcTypeCode(SqlTypes.CHAR) for readability.
+- `openAccount(userId?, currency)`: userId null -> registers new (minimal) User + account; userId given -> must exist. `a_accounts.user_id` is a real FK to `a_users` (JPA: lazy @ManyToOne only for the constraint + read-only mirror `user_id` column for mapping; adapter uses `getReferenceById` so no user SELECT on save).
+- **Ids**: AccountId/UserId are Long, DB auto-increment. Consequence: aggregate id is null until first save; adapter calls `assignId()` after INSERT; `AccountOpenedEvent` is raised by the APP SERVICE after save (documented exception to "events raised in aggregate" — the id is born in the DB). TransactionId stays UUID (domain-generated, char(36)).
 - `reserve()` creates PENDING ledger Transaction + hold in ONE DB transaction (no double-spend); settle/release complete/fail it — Transaction status guard = idempotency (proven by `duplicateSettleIsRejected` test).
 - Events published in-process via ApplicationEventPublisher — replaced by Outbox in step 5.
 - DB: MySQL `ddd_ewallet` (root/1234@localhost, `createDatabaseIfNotExist=true`, ddl-auto=update — Flyway later). Tests: H2 in-memory MySQL mode via `src/test/resources/application.properties`.

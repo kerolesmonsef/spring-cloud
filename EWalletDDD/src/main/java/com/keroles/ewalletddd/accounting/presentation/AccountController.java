@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Presentation edge: HTTP shapes in, HTTP shapes out. Translates primitives <-> VOs
@@ -37,9 +36,9 @@ public class AccountController {
     }
 
     /** userId optional: omit it to register a new user together with the account. */
-    public record OpenAccountRequest(UUID userId, String currency) {}
+    public record OpenAccountRequest(Long userId, String currency) {}
     public record MoneyRequest(BigDecimal amount) {}
-    public record AccountResponse(UUID id, UUID userId, String currency,
+    public record AccountResponse(Long id, Long userId, String currency,
                                   BigDecimal balance, BigDecimal holdBalance) {
         static AccountResponse from(Account account) {
             return new AccountResponse(
@@ -61,18 +60,18 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public AccountResponse get(@PathVariable UUID id) {
+    public AccountResponse get(@PathVariable Long id) {
         return AccountResponse.from(accountService.getAccount(new AccountId(id)));
     }
 
     @GetMapping("/user/{userId}")
-    public List<AccountResponse> byUser(@PathVariable UUID userId) {
+    public List<AccountResponse> byUser(@PathVariable Long userId) {
         return accountService.getUserAccounts(new UserId(userId))
                 .stream().map(AccountResponse::from).toList();
     }
 
     @PostMapping("/{id}/deposit")
-    public AccountResponse deposit(@PathVariable UUID id, @RequestBody MoneyRequest request) {
+    public AccountResponse deposit(@PathVariable Long id, @RequestBody MoneyRequest request) {
         AccountId accountId = new AccountId(id);
         Account account = accountService.getAccount(accountId);
         accountService.deposit(accountId, new Money(request.amount(), account.currency()));
@@ -80,7 +79,7 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/withdraw")
-    public AccountResponse withdraw(@PathVariable UUID id, @RequestBody MoneyRequest request) {
+    public AccountResponse withdraw(@PathVariable Long id, @RequestBody MoneyRequest request) {
         AccountId accountId = new AccountId(id);
         Account account = accountService.getAccount(accountId);
         accountService.withdraw(accountId, new Money(request.amount(), account.currency()));

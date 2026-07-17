@@ -44,7 +44,8 @@ class AccountApplicationServiceIT {
 
     @Test
     void openAccountForUnknownUserIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> service.openAccount(null, AED));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.openAccount(new UserId(999_999_999L), AED));
     }
 
     @Test

@@ -5,9 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-public interface SpringDataAccountJpa extends JpaRepository<AccountJpaEntity, UUID> {
-    Optional<AccountJpaEntity> findByUserIdAndCurrency(UUID userId, String currency);
-    List<AccountJpaEntity> findByUserId(UUID userId);
+public interface SpringDataAccountJpa extends JpaRepository<AccountJpaEntity, Long> {
+    Optional<AccountJpaEntity> findByUserIdAndCurrency(Long userId, String currency);
+    List<AccountJpaEntity> findByUserId(Long userId);
 }

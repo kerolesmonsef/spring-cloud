@@ -14,7 +14,7 @@ class AccountTest {
     private final Currency AED = Currency.getInstance("AED");
 
     private Account accountWith(String amount) {
-        Account a = Account.open(UserId.newId(), AED);
+        Account a = Account.open(new UserId(1L), AED);
         a.deposit(Money.of(amount, "AED"));
         return a;
     }
@@ -61,7 +61,7 @@ class AccountTest {
     void businessVerbsRaiseDomainEvents() {
         Account a = accountWith("100.00");
         a.hold(Money.of("40.00", "AED"));
-        assertEquals(3, a.pullEvents().size()); // AccountOpenedEvent, MoneyDepositedEvent, FundsHeldEvent
+        assertEquals(2, a.pullEvents().size()); // MoneyDepositedEvent, FundsHeldEvent (AccountOpenedEvent raised by app service after save — id born in DB)
         assertTrue(a.pullEvents().isEmpty());   // pull clears the buffer
     }
 }
