@@ -1,9 +1,5 @@
 package com.keroles.ewalletddd.accounting.domain.model;
 
-import java.util.UUID;
-
-public record AccountId(UUID value) {
-    public static AccountId newId() {
-        return new AccountId(UUID.randomUUID());
-    }
+/** DB auto-increment assigns the value; null until the aggregate is first saved. */
+public record AccountId(Long value) {
 }

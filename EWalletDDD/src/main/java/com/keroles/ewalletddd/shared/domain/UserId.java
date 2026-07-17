@@ -1,10 +1,5 @@
 package com.keroles.ewalletddd.shared.domain;
 
-import java.util.UUID;
-
-/** Shared identity VO — the only thing Accounting knows about a user. */
-public record UserId(UUID value) {
-    public static UserId newId() {
-        return new UserId(UUID.randomUUID());
-    }
+/** Shared identity VO — DB auto-increment assigns the value; domain never invents it. */
+public record UserId(Long value) {
 }

@@ -64,8 +64,7 @@ public class TransactionJpaEntity {
         private Long id;
 
         @Column(nullable = false)
-        @JdbcTypeCode(SqlTypes.CHAR)
-        private UUID accountId;
+        private Long accountId;
 
         @Column(nullable = false, length = 10)
         private String direction;

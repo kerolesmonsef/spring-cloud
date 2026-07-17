@@ -1,5 +1,6 @@
 package com.keroles.ewalletddd.accounting.application;
 
+import com.keroles.ewalletddd.accounting.domain.event.AccountOpenedEvent;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.model.AccountId;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
@@ -52,7 +53,9 @@ public class AccountApplicationService {
             throw new IllegalStateException("User already has a " + currency + " account"); // TODO is this legal to throw here ?
         });
         Account account = Account.open(owner, currency);
-        accounts.save(account);
+        accounts.save(account); // adapter assigns the auto-increment id back onto the aggregate
+        // raised here, not in Account.open(): the id is born in the DB, so the event can't exist before save
+        eventPublisher.publishEvent(new AccountOpenedEvent(account.id(), owner, currency));
         publishEvents(account);
         return account.id();
     }

@@ -1,6 +1,5 @@
 package com.keroles.ewalletddd.accounting.domain.model;
 
-import com.keroles.ewalletddd.accounting.domain.event.AccountOpenedEvent;
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
 import com.keroles.ewalletddd.accounting.domain.event.FundsHeldEvent;
 import com.keroles.ewalletddd.accounting.domain.event.FundsReleasedEvent;
@@ -25,7 +24,7 @@ import java.util.List;
  */
 public class Account {
 
-    private final AccountId id;
+    private AccountId id; // null until first save — DB auto-increment births the identity
     private final UserId userId;
     private final Currency currency;
     private Money balance;      // main balance
@@ -41,10 +40,14 @@ public class Account {
     }
 
     public static Account open(UserId userId, Currency currency) {
-        Account account = new Account(
-                AccountId.newId(), userId, currency, Money.zero(currency), Money.zero(currency));
-        account.events.add(new AccountOpenedEvent(account.id, userId, currency));
-        return account;
+        // AccountOpenedEvent is raised by the app service AFTER save — id doesn't exist yet here
+        return new Account(null, userId, currency, Money.zero(currency), Money.zero(currency));
+    }
+
+    /** Called ONCE by the persistence adapter after INSERT. */
+    public void assignId(AccountId id) {
+        if (this.id != null) throw new IllegalStateException("Account already has id " + this.id.value());
+        this.id = id;
     }
 
     /** Reconstitution from persistence — no business rules, no events. */
