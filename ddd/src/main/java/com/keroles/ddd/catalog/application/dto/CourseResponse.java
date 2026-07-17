@@ -1,6 +1,6 @@
 package com.keroles.ddd.catalog.application.dto;
 
-import com.keroles.ddd.catalog.domain.Course;
+import com.keroles.ddd.catalog.domain.model.Course;
 
 import java.math.BigDecimal;
 

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  ONENOTE COPY-PASTE RULES  (workflow: browser -> copy -> OneNote)
+  ============================================================
+  This file is pasted into OneNote. OneNote STRIPS all CSS on
+  paste (verified: Microsoft Graph docs say "CSS is removed").
+  Only these survive: headings, <b>, <i>, <table>, <ul>/<ol>,
+  and inline font color. So design = structure + bold + color.
+  The <style> below only makes it pretty IN THE BROWSER; it must
+  never be what makes content READABLE. Rules:
+
+  1. LIGHT background + DARK text ALWAYS. OneNote keeps text
+     color but DROPS backgrounds. Light text => invisible.
+  2. NO dark-background blocks (incl. dark table headers).
+     White text on a dropped dark bg = invisible on paste.
+  3. Readability must survive with zero CSS. Use bold + inline
+     color + borders, never rely on background color alone.
+  4. TREES: use a NESTED BULLET LIST (native OneNote outline),
+     NOT box-drawing chars in <pre> (font swap => misalign).
+  5. TABLES paste reliably. Prefer them over ASCII art.
+  6. Alt: paste a SCREENSHOT when it must look exact
+     (pixel-perfect but not editable in OneNote).
+  ============================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DDD Cheatsheet</title>
+<style>
+  :root {
+    --ink: #0d1b2a;
+    --blue: #1d4ed8;
+    --slate: #334155;
+    --muted: #64748b;
+    --panel: #f1f5f9;
+    --line: #cbd5e1;
+    --core: #b91c1c;
+    --support: #b45309;
+    --generic: #6d28d9;
+  }
+  body { max-width: 860px; margin: 48px auto; padding: 0 24px;
+    font-family: 'Segoe UI', Arial, sans-serif; color: var(--slate);
+    line-height: 1.65; font-size: 16px; }
+
+  /* Masthead */
+  .eyebrow { font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--blue); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-size: 40px; line-height: 1.1; font-weight: 800; color: var(--ink);
+    margin: 0 0 10px; letter-spacing: -.01em; }
+  .lede { font-size: 17px; color: var(--slate); margin: 0 0 4px; }
+  .lede b { color: var(--ink); }
+  .rule { height: 3px; background: var(--ink); border: 0; margin: 22px 0 8px; }
+
+  /* Section headings — blueprint tick on the left */
+  h2 { font-size: 22px; font-weight: 700; color: var(--ink); margin: 44px 0 14px;
+    padding-left: 14px; border-left: 4px solid var(--blue); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+  th { text-align: left; font-weight: 700; color: var(--ink); font-size: 13px;
+    letter-spacing: .04em; text-transform: uppercase; padding: 10px 14px;
+    background: var(--panel); border-bottom: 2px solid var(--ink); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.k { font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+  /* Yes/No verdict — bold + color so it survives CSS stripping */
+  .yes { color: #15803d; font-weight: 700; }
+  .no  { color: #b45309; font-weight: 700; }
+
+  /* Subdomain tags — colored bold text, readable even naked */
+  .t-core    { color: var(--core);    font-weight: 700; }
+  .t-support { color: var(--support); font-weight: 700; }
+  .t-generic { color: var(--generic); font-weight: 700; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 14px 0 0;
+    padding: 0; list-style: none; font-size: 14px; font-weight: 600; }
+
+  /* Tree as nested outline (OneNote-native bullets) */
+  .tree, .tree ul { list-style: none; margin: 6px 0 0; padding-left: 22px; }
+  .tree > li { margin-top: 4px; }
+  .tree li { margin: 2px 0; }
+  .dir { font-weight: 700; color: var(--ink); }
+  .file { font-family: Consolas, 'Courier New', monospace; font-size: 14px; color: var(--slate); }
+  .why { color: var(--muted); font-style: italic; }
+  .port { color: var(--blue); font-weight: 700; }
+
+  @media (max-width: 560px) { body { font-size: 15px; } h1 { font-size: 30px; } }
+</style>
+</head>
+<body>
+
+<p class="eyebrow">Domain-Driven Design &middot; Quick Reference</p>
+<h1>DDD, mapped to folders</h1>
+<p class="lede"><b>Subject: an e-wallet for stablecoins.</b> The vocabulary of DDD
+&mdash; domain, subdomain, context, aggregate &mdash; only earns its keep when you
+can point at the folder it becomes. This sheet does exactly that.</p>
+<hr class="rule">
+
+<h2>The four words, and which ones are folders</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Word</th>
+      <th>What it is</th>
+      <th>A folder?</th>
+      <th>In the wallet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="k">Domain</td>
+      <td>The whole business problem</td>
+      <td><span class="no">No</span> &mdash; it's the whole app</td>
+      <td><i>&ldquo;a digital wallet for stablecoins&rdquo;</i></td>
+    </tr>
+    <tr>
+      <td class="k">Subdomain</td>
+      <td>A slice of the business:
+        <span class="t-core">Core</span> /
+        <span class="t-support">Supporting</span> /
+        <span class="t-generic">Generic</span></td>
+      <td><span class="no">No</span> &mdash; a classification, a way to think</td>
+      <td><i>Ledger is Core, Onboarding is Supporting</i></td>
+    </tr>
+    <tr>
+      <td class="k">Bounded Context</td>
+      <td>A boundary where one model is valid</td>
+      <td><span class="yes">Yes</span> &mdash; your top-level folder</td>
+      <td><i>ledger, cashout, identity</i></td>
+    </tr>
+    <tr>
+      <td class="k">Aggregate</td>
+      <td>A cluster guarded by one root Entity</td>
+      <td><span class="yes">Yes</span> &mdash; a folder inside a context</td>
+      <td><i>Account, Cashout</i></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Folder structure &mdash; com.stablecoin</h2>
+
+<ul class="legend">
+  <li><span class="t-core">Core</span></li>
+  <li><span class="t-support">Supporting</span></li>
+  <li><span class="t-generic">Generic</span></li>
+  <li><span class="port">PORT</span> = interface</li>
+</ul>
+
+<ul class="tree">
+  <li><span class="dir">com.stablecoin</span>
+    <ul>
+      <li><span class="dir">ledger</span> &mdash; <span class="t-core">Bounded Context (Core)</span>
+        <ul>
+          <li><span class="dir">domain</span> <span class="why">&mdash; the pure heart, NO Spring/JPA here</span>
+            <ul>
+              <li><span class="file">Account.java</span> <span class="why">&mdash; Aggregate Root (Entity)</span></li>
+              <li><span class="file">Entry.java</span> <span class="why">&mdash; inner Entity of the aggregate</span></li>
+              <li><span class="file">Transfer.java</span> <span class="why">&mdash; Aggregate Root</span></li>
+              <li><span class="file">Money.java</span> <span class="why">&mdash; Value Object</span></li>
+              <li><span class="file">AccountId.java</span> <span class="why">&mdash; Value Object (typed ID)</span></li>
+              <li><span class="file">TransferService.java</span> <span class="why">&mdash; Domain Service</span></li>
+              <li><span class="file">AccountRepository.java</span> &mdash; <span class="port">PORT</span> <span class="why">(interface only)</span></li>
+              <li><span class="dir">events</span>
+                <ul>
+                  <li><span class="file">FundsHeld.java</span></li>
+                  <li><span class="file">FundsSettled.java</span></li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li><span class="dir">application</span> <span class="why">&mdash; orchestration, @Service, @Transactional</span>
+            <ul>
+              <li><span class="file">TransferAppService.java</span></li>
+            </ul>
+          </li>
+          <li><span class="dir">infrastructure</span> <span class="why">&mdash; the messy edges</span>
+            <ul>
+              <li><span class="file">AccountJpaEntity.java</span> <span class="why">&mdash; @Entity, the table mapping</span></li>
+              <li><span class="file">JpaAccountRepository.java</span> <span class="why">&mdash; ADAPTER (implements the port)</span></li>
+              <li><span class="file">AccountController.java</span> <span class="why">&mdash; REST endpoint</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li><span class="dir">cashout</span> &mdash; <span class="t-support">Bounded Context (Supporting)</span>
+        <ul>
+          <li><span class="dir">domain</span>
+            <ul>
+              <li><span class="file">Cashout.java</span> <span class="why">&mdash; Aggregate Root</span></li>
+              <li><span class="file">CashoutId.java</span></li>
+              <li><span class="file">Rail.java</span> <span class="why">&mdash; interface: NPSS / LULU / MBANK</span></li>
+              <li><span class="file">CashoutRepository.java</span> &mdash; <span class="port">PORT</span></li>
+              <li><span class="dir">events</span>
+                <ul><li><span class="file">CashoutConfirmed.java</span></li></ul>
+              </li>
+            </ul>
+          </li>
+          <li><span class="dir">application</span>
+            <ul><li><span class="file">CashoutAppService.java</span></li></ul>
+          </li>
+          <li><span class="dir">infrastructure</span>
+            <ul>
+              <li><span class="file">CashoutJpaEntity.java</span></li>
+              <li><span class="file">NpssRailAdapter.java</span> <span class="why">&mdash; Anticorruption Layer for one rail</span></li>
+              <li><span class="file">LuluRailAdapter.java</span></li>
+              <li><span class="file">MbankRailAdapter.java</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li><span class="dir">identity</span> &mdash; <span class="t-generic">Bounded Context (Generic)</span>
+        <ul><li class="why">same domain / application / infrastructure shape</li></ul>
+      </li>
+      <li><span class="dir">onboarding</span> &mdash; <span class="t-support">Bounded Context (Supporting)</span>
+        <ul><li class="why">&hellip;</li></ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</body>
+</html>

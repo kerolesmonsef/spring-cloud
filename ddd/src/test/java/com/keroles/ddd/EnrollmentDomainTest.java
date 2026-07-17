@@ -1,11 +1,11 @@
 package com.keroles.ddd;
 
-import com.keroles.ddd.enrollment.domain.CourseCatalog;
-import com.keroles.ddd.enrollment.domain.Enrollment;
-import com.keroles.ddd.enrollment.domain.EnrollmentPolicy;
-import com.keroles.ddd.enrollment.domain.EnrollmentRepository;
-import com.keroles.ddd.enrollment.domain.Progress;
-import com.keroles.ddd.enrollment.domain.Rating;
+import com.keroles.ddd.enrollment.domain.repository.CourseCatalog;
+import com.keroles.ddd.enrollment.domain.model.Enrollment;
+import com.keroles.ddd.enrollment.domain.service.EnrollmentPolicy;
+import com.keroles.ddd.enrollment.domain.repository.EnrollmentRepository;
+import com.keroles.ddd.enrollment.domain.model.Progress;
+import com.keroles.ddd.enrollment.domain.model.Rating;
 import com.keroles.ddd.sharedkernel.DomainException;
 import org.junit.jupiter.api.Test;
 

@@ -1,6 +1,6 @@
 package com.keroles.ddd.catalog.application.dto;
 
-import com.keroles.ddd.catalog.domain.Teacher;
+import com.keroles.ddd.catalog.domain.model.Teacher;
 
 public record TeacherResponse(Long id, String name) {
 

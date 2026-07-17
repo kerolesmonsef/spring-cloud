@@ -1,6 +1,6 @@
 package com.keroles.ddd.enrollment.application.dto;
 
-import com.keroles.ddd.enrollment.domain.Enrollment;
+import com.keroles.ddd.enrollment.domain.model.Enrollment;
 
 public record EnrollmentResponse(
         Long id,

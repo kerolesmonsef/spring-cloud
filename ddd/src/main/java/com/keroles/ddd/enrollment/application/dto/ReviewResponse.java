@@ -1,6 +1,6 @@
 package com.keroles.ddd.enrollment.application.dto;
 
-import com.keroles.ddd.enrollment.domain.Review;
+import com.keroles.ddd.enrollment.domain.model.Review;
 
 public record ReviewResponse(
         Long id,

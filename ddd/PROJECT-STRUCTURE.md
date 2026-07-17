@@ -40,24 +40,29 @@ com.keroles.ddd
 │   └── DomainException  base business exception
 │
 ├── catalog/             SUPPORTING CONTEXT — "a course you author and publish"
-│   ├── domain/          Course, CourseStatus, Teacher, Money (value object, catalog-only),
-│   │                    repositories (interfaces), CoursePublishedEvent
+│   ├── api/             CatalogController  (/catalog/...)   ← inbound adapter
 │   ├── application/     CatalogService, dto/
-│   ├── infrastructure/  Spring Data repos + JPA adapters
-│   └── interfaces/      CatalogController  (/catalog/...)
+│   ├── domain/
+│   │   ├── model/       Course, CourseStatus, Teacher, Money (value object, catalog-only)
+│   │   ├── repository/  CourseRepository, TeacherRepository (interfaces)
+│   │   └── event/       CoursePublishedEvent
+│   └── infrastructure/
+│       └── persistence/ Spring Data repos + JPA adapters
 │
 ├── enrollment/          CORE CONTEXT — "a course you join and learn"
-│   ├── domain/          Student, Enrollment, Review (3 aggregate roots),
-│   │                    Rating, Progress (value objects), EnrollmentStatus,
-│   │                    repositories (interfaces),
-│   │                    CourseCatalog            (PORT to the other context),
-│   │                    EnrollmentPolicy         (DOMAIN SERVICE),
-│   │                    ReviewableCourseSpecification (SPECIFICATION),
-│   │                    StudentEnrolledEvent
-│   ├── application/     EnrollmentService, dto/, eventlistener/
-│   ├── infrastructure/  Spring Data repos + JPA adapters,
-│   │                    CatalogCourseAdapter     (ANTI-CORRUPTION LAYER)
-│   └── interfaces/      EnrollmentController  (/enrollment/...)
+│   ├── api/             EnrollmentController  (/enrollment/...)   ← inbound adapter
+│   ├── application/     EnrollmentService, dto/, listener/
+│   ├── domain/
+│   │   ├── model/       Student, Enrollment, Review (3 aggregate roots),
+│   │   │                Rating, Progress (value objects), EnrollmentStatus
+│   │   ├── repository/  EnrollmentRepository, ReviewRepository, StudentRepository,
+│   │   │                CourseCatalog            (PORT to the other context — domain-owned)
+│   │   ├── service/     EnrollmentPolicy         (DOMAIN SERVICE)
+│   │   ├── specification/ ReviewableCourseSpecification (SPECIFICATION)
+│   │   └── event/       StudentEnrolledEvent
+│   └── infrastructure/
+│       ├── persistence/ Spring Data repos + JPA adapters
+│       └── acl/         CatalogCourseAdapter     (ANTI-CORRUPTION LAYER)
 │
 └── web/                 GlobalExceptionHandler — maps DomainException -> HTTP 400
 ```
@@ -80,7 +85,7 @@ The enrollment context never sees `title` or `price` — it doesn't need them. I
 questions it cares about, through a port it defines in **its own** language:
 
 ```
-// enrollment/domain/CourseCatalog.java   (the enrollment context's vocabulary)
+// enrollment/domain/repository/CourseCatalog.java   (the enrollment context's vocabulary)
 boolean exists(Long courseId);
 boolean isPublished(Long courseId);
 ```

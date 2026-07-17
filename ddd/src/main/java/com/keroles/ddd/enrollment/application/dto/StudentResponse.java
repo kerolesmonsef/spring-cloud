@@ -1,6 +1,6 @@
 package com.keroles.ddd.enrollment.application.dto;
 
-import com.keroles.ddd.enrollment.domain.Student;
+import com.keroles.ddd.enrollment.domain.model.Student;
 
 public record StudentResponse(Long id, String name) {
 

@@ -2,12 +2,12 @@ package com.keroles.ddd.catalog.application;
 
 import com.keroles.ddd.catalog.application.dto.CourseResponse;
 import com.keroles.ddd.catalog.application.dto.TeacherResponse;
-import com.keroles.ddd.catalog.domain.Course;
-import com.keroles.ddd.catalog.domain.CoursePublishedEvent;
-import com.keroles.ddd.catalog.domain.CourseRepository;
-import com.keroles.ddd.catalog.domain.Money;
-import com.keroles.ddd.catalog.domain.Teacher;
-import com.keroles.ddd.catalog.domain.TeacherRepository;
+import com.keroles.ddd.catalog.domain.model.Course;
+import com.keroles.ddd.catalog.domain.event.CoursePublishedEvent;
+import com.keroles.ddd.catalog.domain.repository.CourseRepository;
+import com.keroles.ddd.catalog.domain.model.Money;
+import com.keroles.ddd.catalog.domain.model.Teacher;
+import com.keroles.ddd.catalog.domain.repository.TeacherRepository;
 import com.keroles.ddd.sharedkernel.DomainException;
 import com.keroles.ddd.sharedkernel.PersonName;
 import lombok.RequiredArgsConstructor;
