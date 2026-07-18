@@ -20,6 +20,14 @@ class AccountTest {
     }
 
     @Test
+    void openAssignsARandomReference() {
+        Account a = Account.open(new UserId(1L), AED);
+        Account b = Account.open(new UserId(1L), AED);
+        assertNotNull(a.reference().value());
+        assertNotEquals(a.reference(), b.reference()); // random per account
+    }
+
+    @Test
     void holdMovesMoneyFromMainToHold() {
         Account a = accountWith("100.00");
         a.hold(Money.of("40.00", "AED"));

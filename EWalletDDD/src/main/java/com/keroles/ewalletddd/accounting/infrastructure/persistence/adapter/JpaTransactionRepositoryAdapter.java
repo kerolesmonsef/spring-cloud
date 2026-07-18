@@ -2,6 +2,7 @@ package com.keroles.ewalletddd.accounting.infrastructure.persistence.adapter;
   import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.TransactionJpaEntity; import com.keroles.ewalletddd.accounting.infrastructure.persistence.mapper.TransactionMapper; import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataTransactionJpa;
 
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
+import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.accounting.domain.repository.TransactionRepository;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,7 @@ public class JpaTransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
-    public Optional<Transaction> findById(Transaction.TransactionId id) {
+    public Optional<Transaction> findById(TransactionId id) {
         return jpa.findById(id.value()).map(TransactionMapper::toDomain);
     }
 

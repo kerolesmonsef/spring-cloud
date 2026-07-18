@@ -15,7 +15,7 @@
 
 ## Architecture laws (agreed, apply everywhere)
 
-- Layers per context: `domain/` (pure JDK, no annotations; sub-packages model/event/exception/repository) · `application/` (use cases, @Transactional, no business rules) · `infrastructure/` (persistence, external adapters) · `presentation/` (controllers, DTOs, exception→HTTP mapping).
+- Layers per context: `domain/` (pure JDK, no annotations; sub-packages model/valueObject/event/exception/repository — `service/` only if a rule spans aggregates) · `application/` (use cases, @Transactional, no business rules) · `infrastructure/` (persistence, external adapters) · `presentation/` (controllers, DTOs, exception→HTTP mapping).
 - Naming: domain events end in `Event`; persistence split into entity/mapper/repository(SpringData)/adapter.
 - Only the **Application Service** is exposed to other contexts. Aggregates, domain services, repositories: never.
 - Business verbs on aggregates, never setters. Events raised inside the aggregate, pulled and published by the app service.
@@ -45,12 +45,15 @@ com.keroles.ewalletddd/
   shared/domain/                    Money (VO, non-negative), UserId
   accounting/
     domain/model/                   Account (aggregate, events, verbs: deposit/withdraw/hold/settle/release),
-                                    AccountId, Transaction (+Entry/Type/Status, restore), InsufficientBalanceException,
+                                    Transaction (+nested Entry/Type/Status/Direction, restore),
                                     User (minimal aggregate: id+createdAt only — Onboarding owns the rich User)
+    domain/valueObject/             AccountId (Long, DB auto-increment), TransactionId (UUID, domain-generated),
+                                    AccountReference (UUID)
     domain/event/                   *Event records: AccountOpenedEvent, MoneyDepositedEvent, MoneyWithdrawnEvent,
                                     FundsHeldEvent, FundsSettledEvent, FundsReleasedEvent
     domain/exception/               InsufficientBalanceException
     domain/repository/              AccountRepository, TransactionRepository, UserRepository (ports)
+    (no domain/service/ yet — all rules live in aggregates; add when a rule spans aggregates)
     application/                    AccountApplicationService — THE front door:
                                     openAccount, deposit, withdraw, reserve→TransactionId, settle(txId), release(txId)
     infrastructure/persistence/

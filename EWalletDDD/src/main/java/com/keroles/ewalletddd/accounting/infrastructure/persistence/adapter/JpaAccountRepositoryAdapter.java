@@ -2,7 +2,7 @@ package com.keroles.ewalletddd.accounting.infrastructure.persistence.adapter;
   import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.AccountJpaEntity; import com.keroles.ewalletddd.accounting.infrastructure.persistence.mapper.AccountMapper; import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataAccountJpa; import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataUserJpa;
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
-import com.keroles.ewalletddd.accounting.domain.model.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import org.springframework.stereotype.Component;

@@ -4,11 +4,6 @@ import com.keroles.ewalletddd.shared.domain.UserId;
 
 import java.time.Instant;
 
-/**
- * Minimal aggregate: Accounting only needs the user to EXIST (referential integrity
- * for accounts). Names, KYC, profile status — that's the Onboarding context's User,
- * not this one. Same word, different context, different model.
- */
 public class User {
 
     private UserId id; // null until first save — DB auto-increment
@@ -27,7 +22,6 @@ public class User {
         return new User(id, createdAt);
     }
 
-    /** Called ONCE by the persistence adapter after INSERT. */
     public void assignId(UserId id) {
         if (this.id != null) throw new IllegalStateException("User already has id " + this.id.value());
         this.id = id;

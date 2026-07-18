@@ -6,7 +6,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Translates domain exceptions to HTTP. Domain throws in its own language; only this edge knows about status codes. */
 @RestControllerAdvice
 public class AccountingExceptionHandler {
 

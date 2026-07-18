@@ -28,6 +28,7 @@ public class JpaUserRepositoryAdapter implements UserRepository {
         UserJpaEntity row = (user.id() == null)
                 ? new UserJpaEntity()
                 : jpa.findById(user.id().value()).orElseGet(UserJpaEntity::new);
+
         row.setCreatedAt(user.createdAt());
         UserJpaEntity saved = jpa.save(row);
         if (user.id() == null) {

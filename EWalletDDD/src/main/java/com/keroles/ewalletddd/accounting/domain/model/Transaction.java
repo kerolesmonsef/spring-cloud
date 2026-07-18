@@ -1,27 +1,14 @@
 package com.keroles.ewalletddd.accounting.domain.model;
 
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.shared.domain.Money;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * Aggregate root — the ledger record of one money movement.
- *
- * Separate aggregate from Account: a transaction can span accounts and lives
- * forever (append-only), while an Account is a live balance. They reference
- * each other by ID only (Evans: aggregates hold identities, not objects).
- *
- * Entries are local entities inside this aggregate; each entry snapshots the
- * account balance AFTER the movement (your transaction_entries.updated_balance).
- */
 public class Transaction {
-
-    public record TransactionId(UUID value) {
-        public static TransactionId newId() { return new TransactionId(UUID.randomUUID()); }
-    }
 
     public enum Type { DEPOSIT, WITHDRAWAL, TRANSFER, CASHOUT }
     public enum Status { PENDING, COMPLETED, FAILED }
@@ -47,7 +34,6 @@ public class Transaction {
         return new Transaction(TransactionId.newId(), type, Status.PENDING, Instant.now());
     }
 
-    /** Reconstitution from persistence — no business rules run here. */
     public static Transaction restore(TransactionId id, Type type, Status status,
                                       Instant createdAt, List<Entry> entries) {
         Transaction tx = new Transaction(id, type, status, createdAt);
@@ -68,6 +54,19 @@ public class Transaction {
         if (status != Status.PENDING)
             throw new IllegalStateException("Transaction is already " + status);
         status = target;
+    }
+
+    public static Transaction deposit(AccountId acc, Money amount, Money balanceAfter) {
+        Transaction tx = start(Type.DEPOSIT);
+        tx.addEntry(acc, Entry.Direction.CREDIT, amount, balanceAfter);
+        tx.complete();
+        return tx;
+    }
+    public static Transaction withdrawal(AccountId acc, Money amount, Money balanceAfter) {
+        Transaction tx = start(Type.WITHDRAWAL);
+        tx.addEntry(acc, Entry.Direction.DEBIT, amount, balanceAfter);
+        tx.complete();
+        return tx;
     }
 
     public TransactionId id() { return id; }

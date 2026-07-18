@@ -3,10 +3,6 @@ package com.keroles.ewalletddd.shared.domain;
 import java.math.BigDecimal;
 import java.util.Currency;
 
-/**
- * Value Object. Immutable, non-negative. Direction (plus/minus) is expressed
- * by TransactionEntry.Direction, not by a signed amount.
- */
 public record Money(BigDecimal amount, Currency currency) {
 
     public Money {

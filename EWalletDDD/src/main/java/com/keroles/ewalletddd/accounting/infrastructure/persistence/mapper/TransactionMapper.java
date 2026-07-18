@@ -1,8 +1,9 @@
 package com.keroles.ewalletddd.accounting.infrastructure.persistence.mapper;
   import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.TransactionJpaEntity;
 
-import com.keroles.ewalletddd.accounting.domain.model.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
+import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.shared.domain.Money;
 
 import java.util.Currency;
@@ -13,7 +14,7 @@ public final class TransactionMapper {
 
     public static Transaction toDomain(TransactionJpaEntity row) {
         return Transaction.restore(
-                new Transaction.TransactionId(row.getId()),
+                new TransactionId(row.getId()),
                 Transaction.Type.valueOf(row.getType()),
                 Transaction.Status.valueOf(row.getStatus()),
                 row.getCreatedAt(),

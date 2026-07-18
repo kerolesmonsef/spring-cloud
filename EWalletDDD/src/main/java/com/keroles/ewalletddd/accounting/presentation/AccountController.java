@@ -2,7 +2,7 @@ package com.keroles.ewalletddd.accounting.presentation;
 
 import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
-import com.keroles.ewalletddd.accounting.domain.model.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import org.springframework.http.HttpStatus;
@@ -18,13 +18,6 @@ import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
 
-/**
- * Presentation edge: HTTP shapes in, HTTP shapes out. Translates primitives <-> VOs
- * and delegates to the front door. Zero business rules.
- *
- * reserve/settle/release are NOT exposed here — they're the internal contract for the
- * Cashout context, not a public API.
- */
 @RestController
 @RequestMapping("/accounts")
 public class AccountController {
@@ -35,7 +28,6 @@ public class AccountController {
         this.accountService = accountService;
     }
 
-    /** userId optional: omit it to register a new user together with the account. */
     public record OpenAccountRequest(Long userId, String currency) {}
     public record MoneyRequest(BigDecimal amount) {}
     public record AccountResponse(Long id, Long userId, String currency,
