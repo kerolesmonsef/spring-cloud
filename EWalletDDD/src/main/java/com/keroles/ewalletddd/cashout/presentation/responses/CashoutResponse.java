@@ -11,7 +11,7 @@ public record CashoutResponse(String id, Long accountRef, BigDecimal amount, Str
                 c.id().value().toString(),
                 c.account().value(),
                 c.amount().amount(),
-                c.amount().currency().getCurrencyCode(),
+                c.amount().currency().code(),
                 c.rail().name(),
                 c.status().name(),
                 c.reservationRef().value().toString(),

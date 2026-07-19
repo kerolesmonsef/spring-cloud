@@ -9,11 +9,11 @@ import com.keroles.ewalletddd.accounting.domain.event.MoneyWithdrawnEvent;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
+import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 
 import java.util.ArrayList;
-import java.util.Currency;
 import java.util.List;
 
 public class Account {
@@ -39,7 +39,6 @@ public class Account {
 
     public static Account open(UserId userId, Currency currency) {
         // AccountOpenedEvent is raised by the app service AFTER save — id doesn't exist yet here
-        // ponytail: defaults to USER; add an openSystem() factory when system accounts are actually needed
         return new Account(null, AccountReference.newRef(), userId, currency, AccountType.USER, Money.zero(currency), Money.zero(currency));
     }
 

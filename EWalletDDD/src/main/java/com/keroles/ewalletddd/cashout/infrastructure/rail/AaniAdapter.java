@@ -27,7 +27,7 @@ public class AaniAdapter implements CashoutRailPort {
     public RailDispatchResult dispatch(CashoutId id, Money amount) {
         String railReference = "AANI-" + UUID.randomUUID();
         log.info("Aani dispatch cashout={} amount={} {} -> {}",
-                id.value(), amount.amount(), amount.currency().getCurrencyCode(), railReference);
+                id.value(), amount.amount(), amount.currency().code(), railReference);
         return RailDispatchResult.pending(railReference);
     }
 }

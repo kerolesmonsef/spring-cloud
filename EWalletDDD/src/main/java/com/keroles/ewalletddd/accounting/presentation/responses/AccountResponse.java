@@ -10,7 +10,7 @@ public record AccountResponse(Long id, Long userId, String currency,
         return new AccountResponse(
                 account.id().value(),
                 account.userId().value(),
-                account.currency().getCurrencyCode(),
+                account.currency().code(),
                 account.balance().amount(),
                 account.holdBalance().amount());
     }

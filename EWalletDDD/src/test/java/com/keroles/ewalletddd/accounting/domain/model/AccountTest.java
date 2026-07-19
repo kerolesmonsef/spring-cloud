@@ -5,13 +5,13 @@ import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import org.junit.jupiter.api.Test;
 
-import java.util.Currency;
+import com.keroles.ewalletddd.shared.domain.Currency;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class AccountTest {
 
-    private final Currency AED = Currency.getInstance("AED");
+    private final Currency AED = Currency.of("AED");
 
     private Account accountWith(String amount) {
         Account a = Account.open(new UserId(1L), AED);

@@ -29,7 +29,8 @@ class CashoutRejectAtDispatchTest {
     @Test
     void railRejectsAtDispatch_cashoutFailedAndHoldReleasedNotSettled() {
         RecordingLedger ledger = new RecordingLedger();
-        CashoutRailRegistry rejecting = rail -> new RejectingRail(rail);
+        CashoutRailRegistry rejecting = RejectingRail::new;
+
         InMemoryCashoutRepo repo = new InMemoryCashoutRepo();
         CashoutApplicationService service =
                 new CashoutApplicationService(repo, ledger, rejecting, event -> {});

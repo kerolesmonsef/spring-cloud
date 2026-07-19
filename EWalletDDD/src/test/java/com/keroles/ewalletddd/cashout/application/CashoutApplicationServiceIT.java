@@ -1,6 +1,7 @@
 package com.keroles.ewalletddd.cashout.application;
 
 import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
+import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
@@ -13,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.Currency;
+import com.keroles.ewalletddd.shared.domain.Currency;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,12 +26,13 @@ class CashoutApplicationServiceIT {
 
     private final CashoutApplicationService cashoutService;
     private final AccountApplicationService accountService;
+    private final TransactionApplicationService transactionService;
 
-    private final Currency AED = Currency.getInstance("AED");
+    private final Currency AED = Currency.of("AED");
 
     private LedgerAccountRef fundedAccount(String amount) {
         AccountId id = accountService.openAccount(null, AED); // null -> registers a new user too
-        accountService.deposit(id, Money.of(amount, "AED"));
+        transactionService.deposit(id, Money.of(amount, "AED"));
         return new LedgerAccountRef(id.value());
     }
 

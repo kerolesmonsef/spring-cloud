@@ -6,16 +6,15 @@ import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
 import com.keroles.ewalletddd.cashout.infrastructure.persistence.entity.CashoutRequestJpaEntity;
+import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.Money;
-
-import java.util.Currency;
 
 public final class CashoutRequestMapper {
 
     private CashoutRequestMapper() {}
 
     public static CashoutRequest toDomain(CashoutRequestJpaEntity row) {
-        Currency currency = Currency.getInstance(row.getCurrency());
+        Currency currency = Currency.of(row.getCurrency());
         return CashoutRequest.restore(
                 new CashoutId(row.getId()),
                 new LedgerAccountRef(row.getAccountRef()),
@@ -32,7 +31,7 @@ public final class CashoutRequestMapper {
         row.setId(c.id().value());
         row.setAccountRef(c.account().value());
         row.setAmount(c.amount().amount());
-        row.setCurrency(c.amount().currency().getCurrencyCode());
+        row.setCurrency(c.amount().currency().code());
         row.setRail(c.rail().name());
         row.setStatus(c.status().name());
         row.setLedgerReservationRef(c.reservationRef().value());

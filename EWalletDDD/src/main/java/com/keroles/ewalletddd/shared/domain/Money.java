@@ -1,18 +1,21 @@
 package com.keroles.ewalletddd.shared.domain;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 
 public record Money(BigDecimal amount, Currency currency) {
+
+    // ponytail: fixed 2dp for now — per-currency precision (crypto wants 8–18) needs a_currencies.fraction_digits
+    // AND wider money columns (currently scale 4). Add both when real crypto amounts flow, not for whole-number seeds.
+    private static final int SCALE = 2;
 
     public Money {
         if (amount == null || currency == null) throw new IllegalArgumentException("amount and currency required");
         if (amount.signum() < 0) throw new IllegalArgumentException("Money cannot be negative: " + amount);
-        amount = amount.setScale(currency.getDefaultFractionDigits());
+        amount = amount.setScale(SCALE);
     }
 
     public static Money of(String amount, String currencyCode) {
-        return new Money(new BigDecimal(amount), Currency.getInstance(currencyCode));
+        return new Money(new BigDecimal(amount), Currency.of(currencyCode));
     }
 
     public static Money zero(Currency currency) {

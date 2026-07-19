@@ -1,6 +1,6 @@
 package com.keroles.ewalletddd.cashout.infrastructure.ledger;
 
-import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
+import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.cashout.domain.port.LedgerAccountPort;
@@ -17,9 +17,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class LedgerAccountAdapter implements LedgerAccountPort {
 
-    private final AccountApplicationService ledger; // accounting.application — the front door
+    private final TransactionApplicationService ledger; // accounting.application — the movement front door
 
-    public LedgerAccountAdapter(AccountApplicationService ledger) {
+    public LedgerAccountAdapter(TransactionApplicationService ledger) {
         this.ledger = ledger;
     }
 

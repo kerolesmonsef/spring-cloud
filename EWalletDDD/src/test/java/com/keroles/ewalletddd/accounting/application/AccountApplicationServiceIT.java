@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.Currency;
+import com.keroles.ewalletddd.shared.domain.Currency;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,12 +20,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class AccountApplicationServiceIT {
 
     private final AccountApplicationService accountApplicationService;
+    private final TransactionApplicationService transactionApplicationService;
 
-    private final Currency AED = Currency.getInstance("AED");
+    private final Currency AED = Currency.of("AED");
 
     private AccountId fundedAccount(String amount) {
         AccountId id = accountApplicationService.openAccount(null, AED); // null -> registers a new user too
-        accountApplicationService.deposit(id, Money.of(amount, "AED"));
+        transactionApplicationService.deposit(id, Money.of(amount, "AED"));
         return id;
     }
 
@@ -33,8 +34,8 @@ class AccountApplicationServiceIT {
     void savingLoadedAccountUpdatesInsteadOfInserting() {
         AccountId accountId = accountApplicationService.openAccount(null, AED);
         UserId user = accountApplicationService.getAccount(accountId).userId();
-        accountApplicationService.deposit(accountId, Money.of("100.00", "AED"));
-        accountApplicationService.deposit(accountId, Money.of("50.00", "AED"));
+        transactionApplicationService.deposit(accountId, Money.of("100.00", "AED"));
+        transactionApplicationService.deposit(accountId, Money.of("50.00", "AED"));
 
         assertEquals(1, accountApplicationService.getUserAccounts(user).size()); // still ONE row
         assertEquals(Money.of("150.00", "AED"), accountApplicationService.getAccount(accountId).balance());
@@ -49,9 +50,9 @@ class AccountApplicationServiceIT {
     @Test
     void reserveThenSettle_holdGoesToZero() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = accountApplicationService.reserve(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
 
-        accountApplicationService.settle(txId);
+        transactionApplicationService.settle(txId);
 
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("60.00", "AED"), account.balance());
@@ -61,9 +62,9 @@ class AccountApplicationServiceIT {
     @Test
     void reserveThenRelease_moneyBackToMain() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = accountApplicationService.reserve(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
 
-        accountApplicationService.release(txId);
+        transactionApplicationService.release(txId);
 
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("100.00", "AED"), account.balance());
@@ -73,10 +74,10 @@ class AccountApplicationServiceIT {
     @Test
     void duplicateSettleIsRejected_idempotencyGuard() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = accountApplicationService.reserve(id, Money.of("40.00", "AED"));
-        accountApplicationService.settle(txId);
+        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
+        transactionApplicationService.settle(txId);
 
-        assertThrows(IllegalStateException.class, () -> accountApplicationService.settle(txId));
+        assertThrows(IllegalStateException.class, () -> transactionApplicationService.settle(txId));
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(id).holdBalance()); // settled once, not twice
     }
 
@@ -84,7 +85,7 @@ class AccountApplicationServiceIT {
     void cannotReserveMoreThanBalance() {
         AccountId id = fundedAccount("10.00");
         assertThrows(InsufficientBalanceException.class,
-                () -> accountApplicationService.reserve(id, Money.of("10.01", "AED")));
+                () -> transactionApplicationService.reserve(id, Money.of("10.01", "AED")));
     }
 
     @Test

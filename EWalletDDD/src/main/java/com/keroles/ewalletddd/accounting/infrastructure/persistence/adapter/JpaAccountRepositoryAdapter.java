@@ -6,10 +6,10 @@ import com.keroles.ewalletddd.accounting.infrastructure.reference.CurrencyReposi
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
+import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import org.springframework.stereotype.Component;
 
-import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +37,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
 
     @Override
     public Optional<Account> findByUserAndCurrency(UserId userId, Currency currency) {
-        return jpa.findByUserIdAndCurrency(userId.value(), currency.getCurrencyCode())
+        return jpa.findByUserIdAndCurrency(userId.value(), currency.code())
                 .map(AccountMapper::toDomain);
     }
 
@@ -62,11 +62,15 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
         AccountJpaEntity saved = jpa.save(row);
         if (isNew) {
             account.assignId(new AccountId(saved.getId())); // hand the DB-born identity back to the aggregate
+            // populate the read-only user_id mirror on the in-persistence-context instance: a same-tx reload
+            // (open-then-fund in one @Transactional) would otherwise read null and NPE on getReferenceById.
+            // Harmless: user_id is insertable=false, Hibernate never writes from this field.
+            saved.setUserId(account.userId().value());
         }
     }
 
     private void linkReferenceData(Account account, AccountJpaEntity row) {
-        String code = account.currency().getCurrencyCode();
+        String code = account.currency().code();
         row.setCurrencyRef(currencyJpa.findByCode(code)
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported currency: " + code)));
         String typeName = account.type().name().toLowerCase();

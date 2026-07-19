@@ -27,7 +27,7 @@ public class MbankAdapter implements CashoutRailPort {
     public RailDispatchResult dispatch(CashoutId id, Money amount) {
         String railReference = "MBANK-" + UUID.randomUUID();
         log.info("Mbank dispatch cashout={} amount={} {} -> CONFIRMED {}",
-                id.value(), amount.amount(), amount.currency().getCurrencyCode(), railReference);
+                id.value(), amount.amount(), amount.currency().code(), railReference);
         return RailDispatchResult.confirmed(railReference); // sync: final outcome now, no callback
     }
 }

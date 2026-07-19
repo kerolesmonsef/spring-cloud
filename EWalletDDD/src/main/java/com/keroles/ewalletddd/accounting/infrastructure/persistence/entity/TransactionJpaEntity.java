@@ -40,6 +40,18 @@ public class TransactionJpaEntity {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(nullable = false, length = 64)
+    private String senderReference;
+
+    @Column(nullable = false, length = 20)
+    private String senderType;
+
+    @Column(nullable = false, length = 64)
+    private String receiverReference;
+
+    @Column(nullable = false, length = 20)
+    private String receiverType;
+
     @Column(nullable = false)
     private Instant createdAt;
 

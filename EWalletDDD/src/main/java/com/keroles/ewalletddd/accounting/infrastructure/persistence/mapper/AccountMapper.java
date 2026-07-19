@@ -5,17 +5,16 @@ import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
+import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
-
-import java.util.Currency;
 
 public final class AccountMapper {
 
     private AccountMapper() {}
 
     public static Account toDomain(AccountJpaEntity row) {
-        Currency currency = Currency.getInstance(row.getCurrency());
+        Currency currency = Currency.of(row.getCurrency());
         // legacy rows (pre-account-type) have null -> default USER
         AccountType type = row.getAccountType() == null
                 ? AccountType.USER
@@ -35,7 +34,7 @@ public final class AccountMapper {
         // id NOT copied — auto-increment, owned by the DB
         row.setAccountReference(account.reference().value()); // updatable=false, so only the INSERT persists it
         row.setUser(userRef);
-        row.setCurrency(account.currency().getCurrencyCode());
+        row.setCurrency(account.currency().code());
         row.setAccountType(account.type().name().toLowerCase()); // matches a_account_types.name; FK ref set in the adapter
         row.setBalance(account.balance().amount());
         row.setHoldBalance(account.holdBalance().amount());
