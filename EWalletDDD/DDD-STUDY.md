@@ -95,6 +95,7 @@ Notes:
 Cashout step-3 specifics:
 - **ACL**: `cashout.infrastructure.ledger.LedgerAccountAdapter` is the ONLY cashout class importing `accounting.*` (the front door + the `AccountId`/`TransactionId` id VOs as published language). `cashout.domain`/`application` know nothing of accounting. Future ArchUnit rule: forbid outside deps on `accounting.domain.model/event/repository` + `accounting.infrastructure`; permit the id VOs + this one adapter reaching `accounting.application`.
 - **Rail extensibility**: `SpringPayoutRailRegistry` self-assembles `Map<Rail,PayoutRailPort>` from all adapter beans. New rail = 1 adapter `@Component` + 1 `Rail` enum value, nothing else.
+- **Dispatch outcome is three-way** (`RailDispatchResult.Outcome`): PENDING (async — Aani/LuLu, awaits confirm/fail callback), CONFIRMED (sync — Mbank, settled at dispatch, no callback), REJECTED (refused up front → fail + release). Sync rails walk DISPATCHED→CONFIRMED inside `requestCashout`; the state machine is unchanged, they just don't wait.
 - **Reservation link**: `reserve()` returns the ledger `TransactionId` → stored on CashoutRequest as `LedgerReservationRef`; confirm→`settle(ref)`, fail→`release(ref)`.
 - **Deferred**: real per-rail webhooks + RailConfirmed/RailFailed saga (step 4, replaces confirm/fail methods); compliance states PENDING_REVIEW/REJECTED (step 7); dispatch-after-commit via Outbox (step 5 — today dispatch runs inside the reserve tx because the fake rail is in-process).
 

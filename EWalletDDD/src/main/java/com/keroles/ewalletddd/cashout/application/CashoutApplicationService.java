@@ -39,11 +39,17 @@ public class CashoutApplicationService {
         // ponytail: dispatch runs inside the reserve tx because the fake rail is in-process.
         // Real rails dispatch AFTER commit via the Outbox (step 5) — don't hold a tx open across an external call.
         RailDispatchResult result = rails.forRail(rail).dispatch(cashout.id(), amount);
-        if (result.accepted()) {
-            cashout.markDispatched(result.railReference());
-        } else {
-            cashout.fail();
-            ledger.release(reservation); // rail refused up front — give the hold back
+        switch (result.outcome()) {
+            case PENDING -> cashout.markDispatched(result.railReference()); // async rail: await confirm/fail callback
+            case CONFIRMED -> {                                             // sync rail: settled at dispatch, no callback
+                cashout.markDispatched(result.railReference());
+                cashout.confirm();
+                ledger.settle(reservation);
+            }
+            case REJECTED -> {
+                cashout.fail();
+                ledger.release(reservation); // rail refused up front — give the hold back
+            }
         }
         cashouts.save(cashout);
         publishEvents(cashout);

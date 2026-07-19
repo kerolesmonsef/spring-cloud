@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Mbank — async bank rail, outcome arrives by webhook.
- * ponytail: fake — logs and returns PENDING. Wire the real client + webhook in step 4.
+ * Mbank — SYNCHRONOUS bank rail: dispatch settles the payout and returns the final result,
+ * no webhook/callback. ponytail: fake — logs and returns CONFIRMED. Wire the real sync client in step 4.
  */
 @Component
 public class MbankAdapter implements PayoutRailPort {
@@ -26,8 +26,8 @@ public class MbankAdapter implements PayoutRailPort {
     @Override
     public RailDispatchResult dispatch(CashoutId id, Money amount) {
         String railReference = "MBANK-" + UUID.randomUUID();
-        log.info("Mbank dispatch cashout={} amount={} {} -> {}",
+        log.info("Mbank dispatch cashout={} amount={} {} -> CONFIRMED {}",
                 id.value(), amount.amount(), amount.currency().getCurrencyCode(), railReference);
-        return RailDispatchResult.pending(railReference);
+        return RailDispatchResult.confirmed(railReference); // sync: final outcome now, no callback
     }
 }

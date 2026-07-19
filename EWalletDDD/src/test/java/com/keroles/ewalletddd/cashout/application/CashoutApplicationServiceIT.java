@@ -73,11 +73,27 @@ class CashoutApplicationServiceIT {
     @Test
     void doubleConfirmIsRejected_holdSettledOnce() {
         LedgerAccountRef acc = fundedAccount("100.00");
-        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.MBANK);
+        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.LULU); // async rail
         cashoutService.confirm(id);
 
         assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
         assertEquals(Money.zero(AED), ledger(acc).holdBalance());    // settled once, not twice
+    }
+
+    @Test
+    void syncRailConfirmsAtDispatch_noCallbackNeeded() {
+        LedgerAccountRef acc = fundedAccount("100.00");
+
+        CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.MBANK);
+
+        // Mbank is synchronous — settled inside requestCashout, no confirm() call
+        Account after = ledger(acc);
+        assertEquals(Money.of("60.00", "AED"), after.balance());
+        assertEquals(Money.zero(AED), after.holdBalance());          // hold already cleared
+        assertEquals(CashoutRequest.Status.CONFIRMED, cashoutService.get(id).status());
+
+        // a late callback on an already-final cashout is rejected
+        assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
     }
 
     @Test
