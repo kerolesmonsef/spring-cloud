@@ -25,7 +25,7 @@ public class TransactionApplicationService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
-    private final ApplicationEventPublisher eventPublisher; // ponytail: in-process events; Outbox pattern when we need reliability across services
+    private final ApplicationEventPublisher eventPublisher;
 
     public TransactionApplicationService(AccountRepository accounts,
                                          TransactionRepository transactions,
@@ -35,7 +35,6 @@ public class TransactionApplicationService {
         this.eventPublisher = eventPublisher;
     }
 
-    // system -> user. Draws from the house account for the wallet's currency.
     @Transactional
     public void topup(AccountId userAccountId, Money amount) {
         Account user = loadAccount(userAccountId);
@@ -51,7 +50,6 @@ public class TransactionApplicationService {
         saveAll(tx, system, user);
     }
 
-    // user -> user. Same currency (Account.withdraw/deposit reject a mismatched amount).
     @Transactional
     public void transfer(AccountId fromId, AccountId toId, Money amount) {
         Account from = loadAccount(fromId);
@@ -76,8 +74,6 @@ public class TransactionApplicationService {
 
         Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(user), partyOf(system));
         tx.addEntry(user.id(), Transaction.Entry.Direction.DEBIT, amount, user.balance());
-        // ponytail: single entry (the user hold) until settle credits the system leg; keep the strict
-        // double-entry second leg for later — see settle()
 
         accountRepository.save(user);
         transactionRepository.save(tx);
@@ -85,25 +81,23 @@ public class TransactionApplicationService {
         return tx.id();
     }
 
-    // cashout success: the user's hold is spent and the money lands in the house account.
     @Transactional
     public void settle(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
         Transaction.Entry userDebit = singleEntryOf(tx); // the hold leg recorded at cashout
-        tx.complete(); // idempotency guard: throws if already settled/failed — BEFORE any balance moves
+        if (tx.status() != Transaction.Status.PENDING)
+            throw new IllegalStateException("Transaction is already " + tx.status());
 
         Account user = loadAccount(userDebit.accountId());
         user.settle(userDebit.amount());
         Account system = loadSystemAccount(user.currency());
         system.deposit(userDebit.amount());
-        // ponytail: system credit not recorded as a second tx entry — the balance moves, the ledger keeps
-        // the single hold entry. Append the credit leg when we want strict double-entry (blocked today by
-        // addEntry requiring PENDING, which the idempotency guard above already consumed).
+        tx.addEntry(system.id(), Transaction.Entry.Direction.CREDIT, userDebit.amount(), system.balance());
+        tx.complete();
 
         saveAll(tx, user, system);
     }
 
-    // cashout failure: the hold returns to the user's main balance. System untouched — it was never credited.
     @Transactional
     public void release(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
@@ -136,8 +130,7 @@ public class TransactionApplicationService {
         return Party.internal(account.reference(), account.type());
     }
 
-    // ponytail: loadAccount + publishEvents also live in AccountApplicationService — 6 lines duplicated,
-    // not worth a shared base class
+
     private Account loadAccount(AccountId id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("No account " + id.value()));

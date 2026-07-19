@@ -9,7 +9,7 @@
 1. **Accounting / Ledger (CORE)** — tables (all `a_` prefixed): a_users, a_accounts, a_transactions, a_transaction_entries.
    - User has multiple accounts, **one per currency**.
    - Each account: **main balance** + **hold balance**.
-   - Cashout lifecycle on ledger: **reserve** (main→hold) → **settle** (hold→0, success) | **release** (hold→main, failure).
+   - Cashout lifecycle on ledger: **cashout** (user hold, PENDING, receiver=SYSTEM) → **settle** (hold→0 + system deposit + system CREDIT entry, COMPLETED) | **release** (hold→main, FAILED).
 2. **Onboarding** — ~5 sequential steps, resume from last completed, profile status "onboarding" until done. Onboarding→Ledger integration: **async event** (OnboardingCompleted → open wallet), never sync.
 3. **Cashout** — CashoutId UUID VO. State machine RESERVED → DISPATCHED → CONFIRMED/FAILED (+ PENDING_REVIEW/REJECTED for compliance). ONE `CashoutRailPort`, 3 ACL adapters: **Aani** (UAE NPSS, ISO 20022, sync-ish, irreversible), **LuLu** (async, correspondent, webhook), **Mbank**. Rails normalized to async **inside the adapters** — dispatch always returns PENDING, outcome always arrives as RailConfirmed/RailFailed event. Cashout talks to Ledger only via `LedgerAccountPort` → Ledger's application service (the front door).
 
@@ -38,7 +38,7 @@
 
 ## Current status
 
-Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). 24 tests green.
+Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). 29 tests green.
 
 ```
 com.keroles.ewalletddd/
@@ -58,13 +58,19 @@ com.keroles.ewalletddd/
     application/                    Two front doors, split by use-case cluster:
                                     AccountApplicationService — lifecycle+queries: openAccount, getAccount, getUserAccounts
                                     TransactionApplicationService — money movements (each writes the tx record):
-                                      deposit, withdraw, reserve→TransactionId, settle(txId), release(txId)
+                                      topup(user, amount)          system.withdraw + user.deposit, 2 entries, COMPLETED
+                                      transfer(from, to, amount)   from.withdraw + to.deposit, 2 entries, COMPLETED
+                                      cashout(user, amount)→txId   user.hold, 1 entry (user DEBIT), PENDING, receiver=SYSTEM
+                                      settle(txId)                 user.settle + system.deposit + system CREDIT entry, COMPLETED
+                                      release(txId)                user.release only, FAILED
+                                      loadSystemAccount(currency)  throws IllegalStateException if missing
     infrastructure/persistence/
       entity/                       AccountJpaEntity (@Version, FK->a_users), UserJpaEntity, TransactionJpaEntity(+entries)
       mapper/                       AccountMapper, TransactionMapper
-      repository/                   SpringData*Jpa interfaces
-      adapter/                      Jpa*RepositoryAdapter (Option B save)
-    presentation/                   AccountController (open/get/deposit/withdraw — reserve/settle/release NOT exposed publicly),
+      repository/                   SpringData*Jpa interfaces (+ findByAccountTypeAndCurrency for house-account resolve)
+      adapter/                      Jpa*RepositoryAdapter (Option B save; findByTypeAndCurrency mirrors existsBy…)
+    presentation/                   AccountController (open/get/topup/transfer — cashout/settle/release NOT public REST;
+                                    leave-wallet money is cashout via CashoutController, not a direct withdraw),
                                     requests/ (OpenAccountRequest, MoneyRequest), responses/ (AccountResponse),
                                     AccountingExceptionHandler (scoped to this context's controllers → ProblemDetail)
   cashout/
@@ -90,22 +96,31 @@ Notes:
 - **Reference data (accounting-owned lookup)**: `a_account_types` (seeded `system`, `user`) + `a_currencies` (seeded from `default.currency` + ETH/SOL/BTC). Plain JPA in `accounting/infrastructure/reference/` (entities + Spring Data repos + `ReferenceDataSeeder` CommandLineRunner, existence-checked/idempotent).
 - **Account ↔ reference links**: `Account` aggregate carries an `AccountType` enum (valueObject, `SYSTEM`/`USER`/`EXTERNAL`), `Account.open` defaults `USER`. `a_accounts` FKs `currency_id`→a_currencies, `account_type_id`→a_account_types (both nullable — ddl-auto can't back-fill legacy rows; new accounts always set them). FKs resolved at INSERT in `JpaAccountRepositoryAdapter` (findByCode/findByName, cold-path); the `currency`(char3)/`account_type`(name) scalar columns remain the mapper's read source (FK associations never navigated). Unseeded currency at open → `IllegalArgumentException("Unsupported currency: ...")`.
 - **Currency is a domain VO, not `java.util.Currency`**: the JDK type is ISO-4217 fiat-only (`getInstance("BTC"/"ETH"/"SOL")` throws), and supported currencies are a business set (a_currencies). `shared/domain/Currency` = `record(code)`; validity enforced at save (adapter's findByCode). `Money` scale is fixed at 2dp (`SCALE` const). Deferred: per-currency precision (crypto 8–18dp) needs `a_currencies.fraction_digits` + wider money columns (currently scale 4).
-- **System (house) accounts — repo-only seed (deliberate, per Keroles: "no domain, service and repositories only")**: `ReferenceDataSeeder` builds `AccountJpaEntity` rows DIRECTLY via `SpringDataAccountJpa` (no `Account` aggregate, no app-service method, no domain factory — `openSystem` was removed). One SYSTEM account per seeded currency, balance 1000, holdBalance 0. Idempotent on `(account_type='system', currency)` via `existsByAccountTypeAndCurrency`. All under ONE shared system user (`findFirstByAccountType("system")` reuses the owner → no orphan users on re-run; else creates one `a_users` row). `run()` is `@Transactional` so get-or-create'd type/currency rows stay managed for the account inserts. This is the ONE sanctioned exception to "aggregate is the only door" — pure seed data, infra-to-infra. Deferred: genesis balance has no counterparty transaction (seed shortcut). Owner model = shared system user (alt: nullable `a_accounts.user_id`, blocked by ddl-auto not relaxing NOT NULL).
+- **System (house) accounts — repo-only seed (deliberate, per Keroles: "no domain, service and repositories only")**: `ReferenceDataSeeder` builds `AccountJpaEntity` rows DIRECTLY via `SpringDataAccountJpa` (no `Account` aggregate, no app-service method, no domain factory — `openSystem` was removed). One SYSTEM account per seeded currency, **genesis balance `1_000_000_000`**, holdBalance 0. Why so large: test funding switched from unlimited EXTERNAL deposit to `topup` (drawn from the shared system float); ITs commit to MySQL and the seeder is idempotent (won't refill), so a small float depletes within/across runs → random `InsufficientBalanceException`. Idempotent on `(account_type='system', currency)` via `existsByAccountTypeAndCurrency`. All under ONE shared system user (`findFirstByAccountType("system")` reuses the owner → no orphan users on re-run; else creates one `a_users` row). `run()` is `@Transactional` so get-or-create'd type/currency rows stay managed for the account inserts. This is the ONE sanctioned exception to "aggregate is the only door" — pure seed data, infra-to-infra. Deferred: genesis balance has no counterparty transaction (seed shortcut). Owner model = shared system user (alt: nullable `a_accounts.user_id`, blocked by ddl-auto not relaxing NOT NULL).
 - **Gotcha fixed (relevant to step 6 open-then-fund)**: the read-only `user_id` mirror on `AccountJpaEntity` (insertable=false) is NOT populated on the in-persistence-context instance right after an INSERT. So opening an account and reloading/re-saving it in the SAME `@Transactional` used to read a null userId → `getReferenceById(null)` NPE. Guarded in `JpaAccountRepositoryAdapter.save` (sets the mirror after insert). Onboarding's "open account + fund on completion" is exactly this shape — the guard makes it safe.
 - `openAccount(userId?, currency)`: userId null -> registers new (minimal) User + account; userId given -> must exist. `a_accounts.user_id` is a real FK to `a_users` (JPA: lazy @ManyToOne only for the constraint + read-only mirror `user_id` column for mapping; adapter uses `getReferenceById` so no user SELECT on save).
 - **Ids**: AccountId/UserId are Long, DB auto-increment. Consequence: aggregate id is null until first save; adapter calls `assignId()` after INSERT; `AccountOpenedEvent` is raised by the APP SERVICE after save (documented exception to "events raised in aggregate" — the id is born in the DB). TransactionId stays UUID (domain-generated, char(36)).
-- `reserve()` creates PENDING ledger Transaction + hold in ONE DB transaction (no double-spend); settle/release complete/fail it — Transaction status guard = idempotency (proven by `duplicateSettleIsRejected` test).
-- **Transaction sender/receiver header** (`Party` VO = String reference + AccountType): the *business* parties, incl. external ones (`AccountType.EXTERNAL`, not seeded — no held account). Distinct from `entries` (the internal ledger postings carrying `balanceAfter`) — header names parties entries can't, entries carry balance the header can't. deposit: EXTERNAL→self · withdrawal/reserve: self→EXTERNAL. `a_transactions` gains 4 cols (`sender_reference`/`sender_type`/`receiver_reference`/`receiver_type`). **ponytail:** cashout's real external destination is still the `Party.EXTERNAL` sentinel — thread it through `reserve()` in step 4.
+- **Ledger money flows** (every user-facing movement is internal↔internal; SYSTEM is one side of topup/cashout):
+  | flow | direction | balance verbs | entries | status |
+  |---|---|---|---|---|
+  | `topup` | system → user | system.withdraw + user.deposit | 2 (system DEBIT, user CREDIT) | COMPLETED atomic |
+  | `transfer` | user → user | from.withdraw + to.deposit | 2 | COMPLETED atomic |
+  | `cashout` | user → system | user.hold only | 1 (user DEBIT) | PENDING |
+  | `settle` | (cashout success) | user.settle + system.deposit | append system CREDIT → 2 | COMPLETED |
+  | `release` | (cashout fail) | user.release only | still 1 | FAILED |
+  `cashout`/`settle`/`release` run in ONE DB transaction each (no double-spend); Transaction status guard = idempotency (proven by `duplicateSettleIsRejected`). `loadSystemAccount` crashes with `IllegalStateException` if the house account is missing for that currency.
+- **Transaction types**: `TOPUP`, `TRANSFER`, `CASHOUT` are the live app-service paths. `DEPOSIT`/`WITHDRAWAL` factories + `Party.EXTERNAL` remain on the aggregate for true outside-world legs (kept deliberately; not used by the app service anymore). Cashout receiver is the real SYSTEM party — this retires the old `Party.EXTERNAL` sentinel on the cashout path.
+- **Transaction sender/receiver header** (`Party` VO = String reference + AccountType): the *business* parties, incl. external ones (`AccountType.EXTERNAL`, not seeded — no held account). Distinct from `entries` (the internal ledger postings carrying `balanceAfter`) — header names parties entries can't, entries carry balance the header can't. Live headers: topup system→user · transfer user→user · cashout user→system. `a_transactions` has 4 cols (`sender_reference`/`sender_type`/`receiver_reference`/`receiver_type`).
 - Events published in-process via ApplicationEventPublisher — replaced by Outbox in step 5.
 - DB: MySQL `ddd_ewallet` (root/1234@localhost, `createDatabaseIfNotExist=true`, ddl-auto=update — Flyway later). Tests currently run against that same MySQL (the H2 testRuntime dep is present but `src/test/resources/application.properties` points at MySQL — H2 switch is a TODO).
 - `@RequiredArgsConstructor` @SpringBootTest classes need `spring.test.constructor.autowire.mode=all` in `src/test/resources/junit-platform.properties` (read before the context loads — NOT application.properties).
-- Tests: `AccountTest`/`CashoutRequestTest` (pure domain), `AccountApplicationServiceIT`/`CashoutApplicationServiceIT` (@SpringBootTest). Cashout IT drives the REAL ledger through the ACL + fake rails: request→hold, confirm→settle, fail→release, double-confirm rejected.
+- Tests: `AccountTest`/`CashoutRequestTest` (pure domain), `AccountApplicationServiceIT`/`CashoutApplicationServiceIT` (@SpringBootTest). Funding helper uses `topup`; hold path uses `cashout`. Transfer IT: fund A, transfer to B, assert both balances. Cashout IT drives the REAL ledger through the ACL + fake rails: request→hold, confirm→settle, fail→release, double-confirm rejected.
 
 Cashout step-3 specifics:
-- **ACL**: `cashout.infrastructure.ledger.LedgerAccountAdapter` is the ONLY cashout class importing `accounting.*`. It depends on `TransactionApplicationService` (reserve/settle/release) — NOT `AccountApplicationService`; the app-service split narrowed cashout's cross-context surface to the movement front door only (it never sees `openAccount`). Plus the `AccountId`/`TransactionId` id VOs as published language. `cashout.domain`/`application` know nothing of accounting. Future ArchUnit rule: forbid outside deps on `accounting.domain.model/event/repository` + `accounting.infrastructure`; permit the id VOs + this one adapter reaching `accounting.application`.
+- **ACL**: `cashout.infrastructure.ledger.LedgerAccountAdapter` is the ONLY cashout class importing `accounting.*`. It depends on `TransactionApplicationService` (`cashout`/`settle`/`release` — port still says `reserve` in cashout language; adapter translates `reserve→ledger.cashout`) — NOT `AccountApplicationService`; the app-service split narrowed cashout's cross-context surface to the movement front door only (it never sees `openAccount`). Plus the `AccountId`/`TransactionId` id VOs as published language. `cashout.domain`/`application` know nothing of accounting. Future ArchUnit rule: forbid outside deps on `accounting.domain.model/event/repository` + `accounting.infrastructure`; permit the id VOs + this one adapter reaching `accounting.application`.
 - **Rail extensibility**: `SpringCashoutRailRegistry` self-assembles `Map<Rail,CashoutRailPort>` from all adapter beans. New rail = 1 adapter `@Component` + 1 `Rail` enum value, nothing else.
 - **Dispatch outcome is three-way** (`RailDispatchResult.Outcome`): PENDING (async — Aani/LuLu, awaits confirm/fail callback), CONFIRMED (sync — Mbank, settled at dispatch, no callback), REJECTED (refused up front → fail + release). Sync rails walk DISPATCHED→CONFIRMED inside `requestCashout`; the state machine is unchanged, they just don't wait.
-- **Reservation link**: `reserve()` returns the ledger `TransactionId` → stored on CashoutRequest as `LedgerReservationRef`; confirm→`settle(ref)`, fail→`release(ref)`.
-- **Deferred**: real per-rail webhooks + RailConfirmed/RailFailed saga (step 4, replaces confirm/fail methods); compliance states PENDING_REVIEW/REJECTED (step 7); dispatch-after-commit via Outbox (step 5 — today dispatch runs inside the reserve tx because the fake rail is in-process).
+- **Reservation link**: `LedgerAccountPort.reserve` → `TransactionApplicationService.cashout` returns the ledger `TransactionId` → stored on CashoutRequest as `LedgerReservationRef`; confirm→`settle(ref)`, fail→`release(ref)`.
+- **Deferred**: real per-rail webhooks + RailConfirmed/RailFailed saga (step 4, replaces confirm/fail methods); compliance states PENDING_REVIEW/REJECTED (step 7); dispatch-after-commit via Outbox (step 5 — today dispatch runs inside the cashout/reserve tx because the fake rail is in-process).
 
 Next session: step 4 — rail webhooks + normalize-to-async saga spine.
