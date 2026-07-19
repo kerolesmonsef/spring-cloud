@@ -5,10 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface SpringDataAccountJpa extends JpaRepository<AccountJpaEntity, Long> {
     Optional<AccountJpaEntity> findByUserIdAndCurrency(Long userId, String currency);
     Optional<AccountJpaEntity> findByAccountTypeAndCurrency(String accountType, String currency);
+    Optional<AccountJpaEntity> findByAccountReference(UUID accountReference);
     List<AccountJpaEntity> findByUserId(Long userId);
     boolean existsByAccountTypeAndCurrency(String accountType, String currency);
     Optional<AccountJpaEntity> findFirstByAccountType(String accountType);

@@ -22,28 +22,30 @@ public class Transaction {
     private final Type type;
     private final Party sender;    // business party money moved FROM (may be EXTERNAL — not a held account)
     private final Party receiver;  // business party money moved TO   (may be EXTERNAL)
+    private final Money amount;    // the transaction's principal — source of truth, NOT derived from entries
     private final Instant createdAt;
     private Status status;
-    // Ledger postings against accounts WE hold. The header (sender/receiver) names the business parties
-    // incl. external ones; entries carry balanceAfter, which only exists for accounts we keep.
+
     private final List<Entry> entries = new ArrayList<>();
 
-    private Transaction(TransactionId id, Type type, Party sender, Party receiver, Status status, Instant createdAt) {
+    private Transaction(TransactionId id, Type type, Party sender, Party receiver, Money amount, Status status,
+                         Instant createdAt) {
         this.id = id;
         this.type = type;
         this.sender = sender;
         this.receiver = receiver;
+        this.amount = amount;
         this.status = status;
         this.createdAt = createdAt;
     }
 
-    public static Transaction start(Type type, Party sender, Party receiver) {
-        return new Transaction(TransactionId.newId(), type, sender, receiver, Status.PENDING, Instant.now());
+    public static Transaction start(Type type, Party sender, Party receiver, Money amount) {
+        return new Transaction(TransactionId.newId(), type, sender, receiver, amount, Status.PENDING, Instant.now());
     }
 
-    public static Transaction restore(TransactionId id, Type type, Party sender, Party receiver, Status status,
-                                      Instant createdAt, List<Entry> entries) {
-        Transaction tx = new Transaction(id, type, sender, receiver, status, createdAt);
+    public static Transaction restore(TransactionId id, Type type, Party sender, Party receiver, Money amount,
+                                      Status status, Instant createdAt, List<Entry> entries) {
+        Transaction tx = new Transaction(id, type, sender, receiver, amount, status, createdAt);
         tx.entries.addAll(entries);
         return tx;
     }
@@ -65,14 +67,14 @@ public class Transaction {
 
     // money in from outside: EXTERNAL funding source -> our account
     public static Transaction deposit(AccountId acc, Party self, Money amount, Money balanceAfter) {
-        Transaction tx = start(Type.DEPOSIT, Party.EXTERNAL, self);
+        Transaction tx = start(Type.DEPOSIT, Party.EXTERNAL, self, amount);
         tx.addEntry(acc, Entry.Direction.CREDIT, amount, balanceAfter);
         tx.complete();
         return tx;
     }
     // money out to outside: our account -> EXTERNAL destination
     public static Transaction withdrawal(AccountId acc, Party self, Money amount, Money balanceAfter) {
-        Transaction tx = start(Type.WITHDRAWAL, self, Party.EXTERNAL);
+        Transaction tx = start(Type.WITHDRAWAL, self, Party.EXTERNAL, amount);
         tx.addEntry(acc, Entry.Direction.DEBIT, amount, balanceAfter);
         tx.complete();
         return tx;
@@ -82,6 +84,7 @@ public class Transaction {
     public Type type() { return type; }
     public Party sender() { return sender; }
     public Party receiver() { return receiver; }
+    public Money amount() { return amount; }
     public Status status() { return status; }
     public Instant createdAt() { return createdAt; }
     public List<Entry> entries() { return List.copyOf(entries); }

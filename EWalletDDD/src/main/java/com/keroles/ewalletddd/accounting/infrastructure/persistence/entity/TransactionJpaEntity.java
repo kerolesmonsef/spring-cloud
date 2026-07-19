@@ -52,6 +52,13 @@ public class TransactionJpaEntity {
     @Column(nullable = false, length = 20)
     private String receiverType;
 
+    // ponytail: nullable — added to an existing live table, can't back-fill pre-existing rows
+    @Column(precision = 19, scale = 4)
+    private BigDecimal amount;
+
+    @Column(length = 3)
+    private String currency;
+
     @Column(nullable = false)
     private Instant createdAt;
 

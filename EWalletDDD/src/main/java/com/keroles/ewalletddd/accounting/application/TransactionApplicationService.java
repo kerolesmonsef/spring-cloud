@@ -2,6 +2,7 @@ package com.keroles.ewalletddd.accounting.application;
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
 import com.keroles.ewalletddd.accounting.domain.valueObject.Party;
@@ -14,12 +15,15 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Money movements on the ledger. Every movement is internal↔internal — the SYSTEM (house) account is one
-// side of every user-facing flow. Each movement writes the Account balances AND its Transaction record in ONE tx.
-//   topup    system -> user   (fund a wallet)          synchronous, one-shot
-//   transfer user   -> user   (send money)             synchronous, one-shot
-//   cashout  user   -> system (withdraw off the wallet) two-phase: hold now, settle/release on the rail outcome
-// settle/release exist ONLY because cashout has an async rail gap; topup/transfer finish atomically and never use them.
+import java.util.UUID;
+
+// Money movements on the ledger. Each movement writes the Account balances AND its Transaction record in ONE tx.
+//   topup           system -> user   synchronous, one-shot
+//   transfer        user   -> user   synchronous, one-shot
+//   initiateTransfer user  -> user   two-phase: hold now, settle/release on the rail outcome
+//   cashout         user   -> system two-phase: hold now, settle/release on the rail outcome
+// settle/release resolve sender/receiver/amount from the Transaction header (not its entries) — the
+// header is the source of truth; entries are per-account ledger postings (room for future fee/vat legs).
 @Service
 public class TransactionApplicationService {
 
@@ -42,7 +46,7 @@ public class TransactionApplicationService {
         system.withdraw(amount);
         user.deposit(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.TOPUP, partyOf(system), partyOf(user));
+        Transaction tx = Transaction.start(Transaction.Type.TOPUP, partyOf(system), partyOf(user), amount);
         tx.addEntry(system.id(), Transaction.Entry.Direction.DEBIT, amount, system.balance());
         tx.addEntry(user.id(), Transaction.Entry.Direction.CREDIT, amount, user.balance());
         tx.complete();
@@ -50,6 +54,7 @@ public class TransactionApplicationService {
         saveAll(tx, system, user);
     }
 
+    // user -> user, synchronous. Moves money atomically, neither hold nor settle.
     @Transactional
     public void transfer(AccountId fromId, AccountId toId, Money amount) {
         Account from = loadAccount(fromId);
@@ -57,12 +62,28 @@ public class TransactionApplicationService {
         from.withdraw(amount);
         to.deposit(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to));
+        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount);
         tx.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
         tx.addEntry(to.id(), Transaction.Entry.Direction.CREDIT, amount, to.balance());
         tx.complete();
 
         saveAll(tx, from, to);
+    }
+
+    // user -> user, two-phase. Holds the sender's funds; receiver gets credited only on settle.
+    @Transactional
+    public TransactionId initiateTransfer(AccountId fromId, AccountId toId, Money amount) {
+        Account from = loadAccount(fromId);
+        Account to = loadAccount(toId);
+        from.hold(amount);
+
+        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount);
+        tx.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
+
+        accountRepository.save(from);
+        transactionRepository.save(tx);
+        publishEvents(from);
+        return tx.id();
     }
 
     // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
@@ -72,7 +93,7 @@ public class TransactionApplicationService {
         Account system = loadSystemAccount(user.currency()); // receiver — also fails fast if the house account is missing
         user.hold(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(user), partyOf(system));
+        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(user), partyOf(system), amount);
         tx.addEntry(user.id(), Transaction.Entry.Direction.DEBIT, amount, user.balance());
 
         accountRepository.save(user);
@@ -84,32 +105,43 @@ public class TransactionApplicationService {
     @Transactional
     public void settle(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
-        Transaction.Entry userDebit = singleEntryOf(tx); // the hold leg recorded at cashout
         if (tx.status() != Transaction.Status.PENDING)
             throw new IllegalStateException("Transaction is already " + tx.status());
+        if (tx.type() != Transaction.Type.CASHOUT && tx.type() != Transaction.Type.TRANSFER)
+            throw new IllegalArgumentException("Cannot settle " + tx.type() + " transaction");
 
-        Account user = loadAccount(userDebit.accountId());
-        user.settle(userDebit.amount());
-        Account system = loadSystemAccount(user.currency());
-        system.deposit(userDebit.amount());
-        tx.addEntry(system.id(), Transaction.Entry.Direction.CREDIT, userDebit.amount(), system.balance());
+        Account sender = resolveParty(tx.sender());
+        sender.settle(tx.amount());
+        Account receiver = resolveParty(tx.receiver());
+        receiver.deposit(tx.amount());
+        tx.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, tx.amount(), receiver.balance());
         tx.complete();
 
-        saveAll(tx, user, system);
+        saveAll(tx, sender, receiver);
     }
 
     @Transactional
     public void release(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
-        Transaction.Entry userDebit = singleEntryOf(tx);
+        if (tx.type() != Transaction.Type.CASHOUT && tx.type() != Transaction.Type.TRANSFER)
+            throw new IllegalArgumentException("Cannot release " + tx.type() + " transaction");
+
         tx.fail();
 
-        Account user = loadAccount(userDebit.accountId());
-        user.release(userDebit.amount());
+        Account holder = resolveParty(tx.sender());
+        holder.release(tx.amount());
 
-        accountRepository.save(user);
+        accountRepository.save(holder);
         transactionRepository.save(tx);
-        publishEvents(user);
+        publishEvents(holder);
+    }
+
+    // Resolves an internal Party (sender or receiver) back to the Account it names — the Transaction
+    // header, not its entries, is the source of truth for who's involved and how much moved.
+    private Account resolveParty(Party party) {
+        AccountReference ref = new AccountReference(UUID.fromString(party.reference()));
+        return accountRepository.findByReference(ref)
+                .orElseThrow(() -> new IllegalArgumentException("No account for party: " + party.reference()));
     }
 
     private Account loadSystemAccount(Currency currency) {
@@ -139,12 +171,6 @@ public class TransactionApplicationService {
     private Transaction loadTransaction(TransactionId id) {
         return transactionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("No transaction " + id.value()));
-    }
-
-    private Transaction.Entry singleEntryOf(Transaction tx) {
-        if (tx.entries().size() != 1)
-            throw new IllegalStateException("Expected single-entry transaction: " + tx.id().value());
-        return tx.entries().get(0);
     }
 
     private void publishEvents(Account account) {
