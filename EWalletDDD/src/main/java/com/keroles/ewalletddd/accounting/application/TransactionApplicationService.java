@@ -89,16 +89,16 @@ public class TransactionApplicationService {
     // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
     @Transactional
     public TransactionId cashout(AccountId userAccountId, Money amount) {
-        Account user = loadAccount(userAccountId);
-        Account system = loadSystemAccount(user.currency()); // receiver — also fails fast if the house account is missing
-        user.hold(amount);
+        Account userAccount = loadAccount(userAccountId);
+        Account system = loadSystemAccount(userAccount.currency()); // receiver — also fails fast if the house account is missing
+        userAccount.hold(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(user), partyOf(system), amount);
-        tx.addEntry(user.id(), Transaction.Entry.Direction.DEBIT, amount, user.balance());
+        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(userAccount), partyOf(system), amount);
+        tx.addEntry(userAccount.id(), Transaction.Entry.Direction.DEBIT, amount, userAccount.balance());
 
-        accountRepository.save(user);
+        accountRepository.save(userAccount);
         transactionRepository.save(tx);
-        publishEvents(user);
+        publishEvents(userAccount);
         return tx.id();
     }
 
