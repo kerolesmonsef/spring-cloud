@@ -3,6 +3,9 @@ package com.keroles.ewalletddd.accounting.presentation;
 import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.presentation.requests.MoneyRequest;
+import com.keroles.ewalletddd.accounting.presentation.requests.OpenAccountRequest;
+import com.keroles.ewalletddd.accounting.presentation.responses.AccountResponse;
 import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import org.springframework.http.HttpStatus;
@@ -14,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
 
@@ -26,20 +28,6 @@ public class AccountController {
 
     public AccountController(AccountApplicationService accountService) {
         this.accountService = accountService;
-    }
-
-    public record OpenAccountRequest(Long userId, String currency) {}
-    public record MoneyRequest(BigDecimal amount) {}
-    public record AccountResponse(Long id, Long userId, String currency,
-                                  BigDecimal balance, BigDecimal holdBalance) {
-        static AccountResponse from(Account account) {
-            return new AccountResponse(
-                    account.id().value(),
-                    account.userId().value(),
-                    account.currency().getCurrencyCode(),
-                    account.balance().amount(),
-                    account.holdBalance().amount());
-        }
     }
 
     @PostMapping
