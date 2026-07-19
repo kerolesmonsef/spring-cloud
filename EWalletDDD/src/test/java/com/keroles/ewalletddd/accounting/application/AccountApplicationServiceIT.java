@@ -26,7 +26,7 @@ class AccountApplicationServiceIT {
 
     private AccountId fundedAccount(String amount) {
         AccountId id = accountApplicationService.openAccount(null, AED); // null -> registers a new user too
-        transactionApplicationService.deposit(id, Money.of(amount, "AED"));
+        transactionApplicationService.topup(id, Money.of(amount, "AED"));
         return id;
     }
 
@@ -34,8 +34,8 @@ class AccountApplicationServiceIT {
     void savingLoadedAccountUpdatesInsteadOfInserting() {
         AccountId accountId = accountApplicationService.openAccount(null, AED);
         UserId user = accountApplicationService.getAccount(accountId).userId();
-        transactionApplicationService.deposit(accountId, Money.of("100.00", "AED"));
-        transactionApplicationService.deposit(accountId, Money.of("50.00", "AED"));
+        transactionApplicationService.topup(accountId, Money.of("100.00", "AED"));
+        transactionApplicationService.topup(accountId, Money.of("50.00", "AED"));
 
         assertEquals(1, accountApplicationService.getUserAccounts(user).size()); // still ONE row
         assertEquals(Money.of("150.00", "AED"), accountApplicationService.getAccount(accountId).balance());
@@ -50,7 +50,7 @@ class AccountApplicationServiceIT {
     @Test
     void reserveThenSettle_holdGoesToZero() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
 
         transactionApplicationService.settle(txId);
 
@@ -62,7 +62,7 @@ class AccountApplicationServiceIT {
     @Test
     void reserveThenRelease_moneyBackToMain() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
 
         transactionApplicationService.release(txId);
 
@@ -74,7 +74,7 @@ class AccountApplicationServiceIT {
     @Test
     void duplicateSettleIsRejected_idempotencyGuard() {
         AccountId id = fundedAccount("100.00");
-        TransactionId txId = transactionApplicationService.reserve(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
         transactionApplicationService.settle(txId);
 
         assertThrows(IllegalStateException.class, () -> transactionApplicationService.settle(txId));
@@ -85,7 +85,18 @@ class AccountApplicationServiceIT {
     void cannotReserveMoreThanBalance() {
         AccountId id = fundedAccount("10.00");
         assertThrows(InsufficientBalanceException.class,
-                () -> transactionApplicationService.reserve(id, Money.of("10.01", "AED")));
+                () -> transactionApplicationService.cashout(id, Money.of("10.01", "AED")));
+    }
+
+    @Test
+    void transferMovesMoneyBetweenAccounts() {
+        AccountId from = fundedAccount("100.00");
+        AccountId to = accountApplicationService.openAccount(null, AED);
+
+        transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
+
+        assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
+        assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
     }
 
     @Test

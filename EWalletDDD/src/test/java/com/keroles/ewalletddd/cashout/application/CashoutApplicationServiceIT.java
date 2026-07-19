@@ -32,7 +32,7 @@ class CashoutApplicationServiceIT {
 
     private LedgerAccountRef fundedAccount(String amount) {
         AccountId id = accountService.openAccount(null, AED); // null -> registers a new user too
-        transactionService.deposit(id, Money.of(amount, "AED"));
+        transactionService.topup(id, Money.of(amount, "AED"));
         return new LedgerAccountRef(id.value());
     }
 

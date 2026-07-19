@@ -18,7 +18,9 @@ import java.util.UUID;
 @Component
 public class ReferenceDataSeeder implements CommandLineRunner {
 
-    private static final BigDecimal SYSTEM_ACCOUNT_SEED = new BigDecimal("1000");
+    // Large genesis: topup draws user funding from here, and (MySQL) ITs commit + the seed is idempotent
+    // (never refilled), so a small float would deplete across runs -> spurious InsufficientBalanceException.
+    private static final BigDecimal SYSTEM_ACCOUNT_SEED = new BigDecimal("1000000000");
     private static final String SYSTEM_TYPE = "system";
 
     private final AccountTypeRepository accountTypes;
@@ -84,3 +86,4 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         return currencies.findByCode(code).orElseGet(() -> currencies.save(new CurrencyJpaEntity(code)));
     }
 }
+

@@ -25,7 +25,8 @@ public class LedgerAccountAdapter implements LedgerAccountPort {
 
     @Override
     public LedgerReservationRef reserve(LedgerAccountRef account, Money amount) {
-        TransactionId tx = ledger.reserve(new AccountId(account.value()), amount);
+        // cashout holds the user's funds against the house account; the reservation IS the ledger tx
+        TransactionId tx = ledger.cashout(new AccountId(account.value()), amount);
         return new LedgerReservationRef(tx.value());
     }
 

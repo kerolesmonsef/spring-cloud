@@ -2,19 +2,24 @@ package com.keroles.ewalletddd.accounting.application;
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
 import com.keroles.ewalletddd.accounting.domain.valueObject.Party;
 import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
 import com.keroles.ewalletddd.accounting.domain.repository.TransactionRepository;
+import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.Money;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Money movements on the ledger. Each writes the Account balance AND its Transaction record in ONE tx.
-// Split from AccountApplicationService (account lifecycle) so cross-context consumers (cashout's ACL)
-// depend only on the movement surface, never on openAccount.
+// Money movements on the ledger. Every movement is internal↔internal — the SYSTEM (house) account is one
+// side of every user-facing flow. Each movement writes the Account balances AND its Transaction record in ONE tx.
+//   topup    system -> user   (fund a wallet)          synchronous, one-shot
+//   transfer user   -> user   (send money)             synchronous, one-shot
+//   cashout  user   -> system (withdraw off the wallet) two-phase: hold now, settle/release on the rail outcome
+// settle/release exist ONLY because cashout has an async rail gap; topup/transfer finish atomically and never use them.
 @Service
 public class TransactionApplicationService {
 
@@ -30,73 +35,101 @@ public class TransactionApplicationService {
         this.eventPublisher = eventPublisher;
     }
 
+    // system -> user. Draws from the house account for the wallet's currency.
     @Transactional
-    public void deposit(AccountId accountId, Money amount) {
-        Account account = loadAccount(accountId);
-        account.deposit(amount);
+    public void topup(AccountId userAccountId, Money amount) {
+        Account user = loadAccount(userAccountId);
+        Account system = loadSystemAccount(user.currency());
+        system.withdraw(amount);
+        user.deposit(amount);
 
-        Transaction tx = Transaction.deposit(accountId, partyOf(account), amount, account.balance());
+        Transaction tx = Transaction.start(Transaction.Type.TOPUP, partyOf(system), partyOf(user));
+        tx.addEntry(system.id(), Transaction.Entry.Direction.DEBIT, amount, system.balance());
+        tx.addEntry(user.id(), Transaction.Entry.Direction.CREDIT, amount, user.balance());
+        tx.complete();
 
-        accountRepository.save(account);
-        transactionRepository.save(tx);
-        publishEvents(account);
+        saveAll(tx, system, user);
     }
 
+    // user -> user. Same currency (Account.withdraw/deposit reject a mismatched amount).
     @Transactional
-    public void withdraw(AccountId accountId, Money amount) {
-        Account account = loadAccount(accountId);
-        account.withdraw(amount);
+    public void transfer(AccountId fromId, AccountId toId, Money amount) {
+        Account from = loadAccount(fromId);
+        Account to = loadAccount(toId);
+        from.withdraw(amount);
+        to.deposit(amount);
 
-        Transaction tx = Transaction.withdrawal(accountId, partyOf(account), amount, account.balance());
+        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to));
+        tx.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
+        tx.addEntry(to.id(), Transaction.Entry.Direction.CREDIT, amount, to.balance());
+        tx.complete();
 
-        accountRepository.save(account);
-        transactionRepository.save(tx);
-
-        publishEvents(account);
+        saveAll(tx, from, to);
     }
 
-    // balance check + hold run in one DB tx — two concurrent reserves can't both pass
+    // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
     @Transactional
-    public TransactionId reserve(AccountId accountId, Money amount) {
-        Account account = loadAccount(accountId);
-        account.hold(amount);
+    public TransactionId cashout(AccountId userAccountId, Money amount) {
+        Account user = loadAccount(userAccountId);
+        Account system = loadSystemAccount(user.currency()); // receiver — also fails fast if the house account is missing
+        user.hold(amount);
 
-        // ponytail: receiver is the EXTERNAL sentinel; cashout threads the real destination into reserve() next
-        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(account), Party.EXTERNAL);
-        tx.addEntry(accountId, Transaction.Entry.Direction.DEBIT, amount, account.balance());
+        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(user), partyOf(system));
+        tx.addEntry(user.id(), Transaction.Entry.Direction.DEBIT, amount, user.balance());
+        // ponytail: single entry (the user hold) until settle credits the system leg; keep the strict
+        // double-entry second leg for later — see settle()
 
-        accountRepository.save(account);
+        accountRepository.save(user);
         transactionRepository.save(tx);
-        publishEvents(account);
+        publishEvents(user);
         return tx.id();
     }
 
+    // cashout success: the user's hold is spent and the money lands in the house account.
     @Transactional
     public void settle(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
-        Transaction.Entry entry = singleEntryOf(tx);
-        tx.complete(); // throws if not PENDING — duplicate settle is rejected here
+        Transaction.Entry userDebit = singleEntryOf(tx); // the hold leg recorded at cashout
+        tx.complete(); // idempotency guard: throws if already settled/failed — BEFORE any balance moves
 
-        Account account = loadAccount(entry.accountId());
-        account.settle(entry.amount());
+        Account user = loadAccount(userDebit.accountId());
+        user.settle(userDebit.amount());
+        Account system = loadSystemAccount(user.currency());
+        system.deposit(userDebit.amount());
+        // ponytail: system credit not recorded as a second tx entry — the balance moves, the ledger keeps
+        // the single hold entry. Append the credit leg when we want strict double-entry (blocked today by
+        // addEntry requiring PENDING, which the idempotency guard above already consumed).
 
-        accountRepository.save(account);
-        transactionRepository.save(tx);
-        publishEvents(account);
+        saveAll(tx, user, system);
     }
 
+    // cashout failure: the hold returns to the user's main balance. System untouched — it was never credited.
     @Transactional
     public void release(TransactionId txId) {
         Transaction tx = loadTransaction(txId);
-        Transaction.Entry entry = singleEntryOf(tx);
+        Transaction.Entry userDebit = singleEntryOf(tx);
         tx.fail();
 
-        Account account = loadAccount(entry.accountId());
-        account.release(entry.amount());
+        Account user = loadAccount(userDebit.accountId());
+        user.release(userDebit.amount());
 
-        accountRepository.save(account);
+        accountRepository.save(user);
         transactionRepository.save(tx);
-        publishEvents(account);
+        publishEvents(user);
+    }
+
+    private Account loadSystemAccount(Currency currency) {
+        return accountRepository.findByTypeAndCurrency(AccountType.SYSTEM, currency)
+                .orElseThrow(() -> new IllegalStateException("No SYSTEM account for " + currency.code()
+                        + " — seed one before moving money in this currency"));
+    }
+
+    private void saveAll(Transaction tx, Account a, Account b) {
+        accountRepository.save(a);
+        accountRepository.save(b);
+        transactionRepository.save(tx);
+        publishEvents(a);
+        publishEvents(b);
     }
 
     private Party partyOf(Account account) {

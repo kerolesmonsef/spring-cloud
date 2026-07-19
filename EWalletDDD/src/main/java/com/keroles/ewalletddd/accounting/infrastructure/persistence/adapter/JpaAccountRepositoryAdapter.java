@@ -5,6 +5,7 @@ import com.keroles.ewalletddd.accounting.infrastructure.reference.CurrencyReposi
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
 import com.keroles.ewalletddd.shared.domain.Currency;
 import com.keroles.ewalletddd.shared.domain.UserId;
@@ -38,6 +39,12 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
     @Override
     public Optional<Account> findByUserAndCurrency(UserId userId, Currency currency) {
         return jpa.findByUserIdAndCurrency(userId.value(), currency.code())
+                .map(AccountMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Account> findByTypeAndCurrency(AccountType type, Currency currency) {
+        return jpa.findByAccountTypeAndCurrency(type.name().toLowerCase(), currency.code())
                 .map(AccountMapper::toDomain);
     }
 

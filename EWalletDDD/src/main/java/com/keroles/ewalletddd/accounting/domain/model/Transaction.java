@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Transaction {
 
-    public enum Type { DEPOSIT, WITHDRAWAL, TRANSFER, CASHOUT }
+    public enum Type { DEPOSIT, WITHDRAWAL, TOPUP, TRANSFER, CASHOUT }
     public enum Status { PENDING, COMPLETED, FAILED }
 
     public record Entry(AccountId accountId, Direction direction, Money amount, Money balanceAfter) {

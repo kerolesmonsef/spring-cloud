@@ -51,19 +51,21 @@ public class AccountController {
                 .stream().map(AccountResponse::from).toList();
     }
 
-    @PostMapping("/{id}/deposit")
-    public AccountResponse deposit(@PathVariable Long id, @RequestBody MoneyRequest request) {
+    // fund a wallet from the house account (system -> user)
+    @PostMapping("/{id}/topup")
+    public AccountResponse topup(@PathVariable Long id, @RequestBody MoneyRequest request) {
         AccountId accountId = new AccountId(id);
         Account account = accountService.getAccount(accountId);
-        transactionService.deposit(accountId, new Money(request.amount(), account.currency()));
+        transactionService.topup(accountId, new Money(request.amount(), account.currency()));
         return AccountResponse.from(accountService.getAccount(accountId));
     }
 
-    @PostMapping("/{id}/withdraw")
-    public AccountResponse withdraw(@PathVariable Long id, @RequestBody MoneyRequest request) {
-        AccountId accountId = new AccountId(id);
-        Account account = accountService.getAccount(accountId);
-        transactionService.withdraw(accountId, new Money(request.amount(), account.currency()));
-        return AccountResponse.from(accountService.getAccount(accountId));
+    // user -> user
+    @PostMapping("/{id}/transfer/{toId}")
+    public AccountResponse transfer(@PathVariable Long id, @PathVariable Long toId, @RequestBody MoneyRequest request) {
+        AccountId fromId = new AccountId(id);
+        Account from = accountService.getAccount(fromId);
+        transactionService.transfer(fromId, new AccountId(toId), new Money(request.amount(), from.currency()));
+        return AccountResponse.from(accountService.getAccount(fromId));
     }
 }

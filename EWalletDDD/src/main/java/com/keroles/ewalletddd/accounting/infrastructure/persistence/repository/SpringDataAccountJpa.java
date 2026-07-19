@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface SpringDataAccountJpa extends JpaRepository<AccountJpaEntity, Long> {
     Optional<AccountJpaEntity> findByUserIdAndCurrency(Long userId, String currency);
+    Optional<AccountJpaEntity> findByAccountTypeAndCurrency(String accountType, String currency);
     List<AccountJpaEntity> findByUserId(Long userId);
     boolean existsByAccountTypeAndCurrency(String accountType, String currency);
     Optional<AccountJpaEntity> findFirstByAccountType(String accountType);
