@@ -2,7 +2,7 @@ package com.keroles.ewalletddd.cashout.application;
 
 import com.keroles.ewalletddd.cashout.domain.model.CashoutRequest;
 import com.keroles.ewalletddd.cashout.domain.port.LedgerAccountPort;
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailRegistry;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailRegistry;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.repository.CashoutRepository;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
@@ -19,12 +19,12 @@ public class CashoutApplicationService {
 
     private final CashoutRepository cashouts;
     private final LedgerAccountPort ledger;   // ACL to the Accounting front door
-    private final PayoutRailRegistry rails;
+    private final CashoutRailRegistry rails;
     private final ApplicationEventPublisher eventPublisher; // ponytail: in-process; Outbox in step 5
 
     public CashoutApplicationService(CashoutRepository cashouts,
                                      LedgerAccountPort ledger,
-                                     PayoutRailRegistry rails,
+                                     CashoutRailRegistry rails,
                                      ApplicationEventPublisher eventPublisher) {
         this.cashouts = cashouts;
         this.ledger = ledger;

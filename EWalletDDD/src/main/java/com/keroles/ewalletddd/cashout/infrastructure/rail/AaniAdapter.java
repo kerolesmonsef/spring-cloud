@@ -1,6 +1,6 @@
 package com.keroles.ewalletddd.cashout.infrastructure.rail;
 
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailPort;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailPort;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
@@ -16,7 +16,7 @@ import java.util.UUID;
  * ponytail: fake — logs and returns PENDING. Wire the real NPSS client + normalize-to-async webhook in step 4.
  */
 @Component
-public class AaniAdapter implements PayoutRailPort {
+public class AaniAdapter implements CashoutRailPort {
 
     private static final Logger log = LoggerFactory.getLogger(AaniAdapter.class);
 

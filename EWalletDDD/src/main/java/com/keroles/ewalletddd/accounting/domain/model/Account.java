@@ -8,6 +8,7 @@ import com.keroles.ewalletddd.accounting.domain.event.MoneyDepositedEvent;
 import com.keroles.ewalletddd.accounting.domain.event.MoneyWithdrawnEvent;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 
@@ -21,22 +22,25 @@ public class Account {
     private final AccountReference reference; // stable public UUID, born in the domain (not the DB)
     private final UserId userId;
     private final Currency currency;
+    private final AccountType type;
     private Money balance;
     private Money holdBalance;  // reserved for in-flight transactions
     private final List<Object> events = new ArrayList<>();
 
-    private Account(AccountId id, AccountReference reference, UserId userId, Currency currency, Money balance, Money holdBalance) {
+    private Account(AccountId id, AccountReference reference, UserId userId, Currency currency, AccountType type, Money balance, Money holdBalance) {
         this.id = id;
         this.reference = reference;
         this.userId = userId;
         this.currency = currency;
+        this.type = type;
         this.balance = balance;
         this.holdBalance = holdBalance;
     }
 
     public static Account open(UserId userId, Currency currency) {
         // AccountOpenedEvent is raised by the app service AFTER save — id doesn't exist yet here
-        return new Account(null, AccountReference.newRef(), userId, currency, Money.zero(currency), Money.zero(currency));
+        // ponytail: defaults to USER; add an openSystem() factory when system accounts are actually needed
+        return new Account(null, AccountReference.newRef(), userId, currency, AccountType.USER, Money.zero(currency), Money.zero(currency));
     }
 
     public void assignId(AccountId id) {
@@ -44,8 +48,8 @@ public class Account {
         this.id = id;
     }
 
-    public static Account restore(AccountId id, AccountReference reference, UserId userId, Currency currency, Money balance, Money holdBalance) {
-        return new Account(id, reference, userId, currency, balance, holdBalance);
+    public static Account restore(AccountId id, AccountReference reference, UserId userId, Currency currency, AccountType type, Money balance, Money holdBalance) {
+        return new Account(id, reference, userId, currency, type, balance, holdBalance);
     }
 
     public void deposit(Money amount) {
@@ -103,6 +107,7 @@ public class Account {
     public AccountReference reference() { return reference; }
     public UserId userId() { return userId; }
     public Currency currency() { return currency; }
+    public AccountType type() { return type; }
     public Money balance() { return balance; }
     public Money holdBalance() { return holdBalance; }
 }

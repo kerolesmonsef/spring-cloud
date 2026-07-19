@@ -1,6 +1,6 @@
 package com.keroles.ewalletddd.cashout.infrastructure.rail;
 
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailPort;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailPort;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
@@ -16,7 +16,7 @@ import java.util.UUID;
  * ponytail: fake — logs and returns PENDING. Wire the real client + webhook in step 4.
  */
 @Component
-public class LuLuAdapter implements PayoutRailPort {
+public class LuLuAdapter implements CashoutRailPort {
 
     private static final Logger log = LoggerFactory.getLogger(LuLuAdapter.class);
 

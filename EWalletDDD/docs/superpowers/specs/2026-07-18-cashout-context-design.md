@@ -6,8 +6,8 @@ Roadmap: DDD-STUDY.md step 3. Defers step 4 (real webhooks + saga) and step 7 (c
 ## Goal
 
 Build the Cashout bounded context end-to-end as a **vertical slice with a simulated
-rail callback**: a user requests a payout, funds are held on the Ledger, the request is
-dispatched to a payout rail (fake), and a later `confirm`/`fail` (standing in for the
+rail callback**: a user requests a cashout, funds are held on the Ledger, the request is
+dispatched to a cashout rail (fake), and a later `confirm`/`fail` (standing in for the
 async rail callback) settles or releases the hold on the Ledger.
 
 Proves the whole flow — including the anti-corruption layer to Accounting — works, without
@@ -28,7 +28,7 @@ building HTTP webhook plumbing to rails that don't exist in a learning environme
 - Compliance states PENDING_REVIEW / REJECTED (step 7).
 - Real per-rail webhook controllers + `RailConfirmed`/`RailFailed` event-driven saga (step 4).
 - Outbox pattern — events stay in-process via `ApplicationEventPublisher` (step 5).
-- Payout destination details (IBAN/wallet) — `dispatch` takes only id + amount for now.
+- Cashout destination details (IBAN/wallet) — `dispatch` takes only id + amount for now.
 
 ## Package tree (mirrors Accounting)
 
@@ -42,7 +42,7 @@ cashout/
                      CashoutConfirmedEvent, CashoutFailedEvent
     exception/       IllegalCashoutStateException (state-guard)
     repository/      CashoutRepository (port)
-    port/            PayoutRailPort, PayoutRailRegistry, LedgerAccountPort   [NEW subpackage]
+    port/            CashoutRailPort, CashoutRailRegistry, LedgerAccountPort   [NEW subpackage]
   application/       CashoutApplicationService  (THE front door)
   infrastructure/
     persistence/
@@ -51,14 +51,14 @@ cashout/
       repository/    SpringDataCashoutJpa
       adapter/       JpaCashoutRepositoryAdapter (Option B)
     ledger/          LedgerAccountAdapter  (implements LedgerAccountPort; the ACL)
-    rail/            AaniAdapter, LuLuAdapter, MbankAdapter (implement PayoutRailPort),
-                     SpringPayoutRailRegistry (implements PayoutRailRegistry)
+    rail/            AaniAdapter, LuLuAdapter, MbankAdapter (implement CashoutRailPort),
+                     SpringCashoutRailRegistry (implements CashoutRailRegistry)
   presentation/      CashoutController, CashoutExceptionHandler,
                      requests/CreateCashoutRequest, responses/CashoutResponse
 ```
 
 `domain/port/` is a new subpackage vs Accounting (which only had `repository/` for its
-ports). Rationale: `PayoutRailPort`/`LedgerAccountPort` are outbound driven ports, not
+ports). Rationale: `CashoutRailPort`/`LedgerAccountPort` are outbound driven ports, not
 repositories. DDD-STUDY sub-package convention updated to allow `port/`.
 
 ## Domain — CashoutRequest aggregate
@@ -94,7 +94,7 @@ interface LedgerAccountPort {                       // cashout's terms; adapter 
     void release(LedgerReservationRef reservation);
 }
 
-interface PayoutRailPort {
+interface CashoutRailPort {
     Rail rail();                                     // which rail this adapter serves
     RailDispatchResult dispatch(CashoutId id, Money amount);
 }
@@ -103,7 +103,7 @@ record RailDispatchResult(boolean accepted, String railReference, String reason)
     static RailDispatchResult rejected(String reason) { return new RailDispatchResult(false, null, reason); }
 }
 
-interface PayoutRailRegistry { PayoutRailPort forRail(Rail rail); }   // built from all adapters
+interface CashoutRailRegistry { CashoutRailPort forRail(Rail rail); }   // built from all adapters
 ```
 
 `Money` is `shared.domain.Money` (shared kernel — allowed across contexts).
@@ -138,10 +138,10 @@ open across an external call. Acceptable here because the fake rail dispatch is 
 
 ## Rail selection / extensibility
 
-`SpringPayoutRailRegistry` receives `List<PayoutRailPort>` (all `@Component` adapters) and
-builds `Map<Rail,PayoutRailPort>` keyed by `PayoutRailPort.rail()`. `forRail` throws if no
+`SpringCashoutRailRegistry` receives `List<CashoutRailPort>` (all `@Component` adapters) and
+builds `Map<Rail,CashoutRailPort>` keyed by `CashoutRailPort.rail()`. `forRail` throws if no
 adapter serves the rail. **Adding rail #4 = one new `@Component` adapter + one `Rail` enum
-value, nothing else changes.** App service depends on the `PayoutRailRegistry` interface
+value, nothing else changes.** App service depends on the `CashoutRailRegistry` interface
 (inward-pointing dependency), not the Spring impl.
 
 The 3 fakes differ only cosmetically (rail name, log line); each returns

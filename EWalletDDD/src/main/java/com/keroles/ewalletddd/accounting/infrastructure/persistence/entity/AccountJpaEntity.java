@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import com.keroles.ewalletddd.accounting.infrastructure.reference.AccountTypeJpaEntity;
+import com.keroles.ewalletddd.accounting.infrastructure.reference.CurrencyJpaEntity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -44,7 +46,21 @@ public class AccountJpaEntity {
     private Long userId;
 
     @Column(nullable = false, length = 3)
-    private String currency;
+    private String currency; // ISO code — the domain's source of truth; a_currencies FK below mirrors it for integrity
+
+    /** Link to a_currencies. Set on save, never navigated (mapper reads the code column above). */
+    // ponytail: FK nullable — ddl-auto=update can't back-fill it on pre-existing a_accounts rows; new accounts always set it
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "currency_id")
+    private CurrencyJpaEntity currencyRef;
+
+    @Column(name = "account_type", length = 20)
+    private String accountType; // enum name, lowercased (matches a_account_types.name); null on legacy rows -> USER
+
+    /** Link to a_account_types. Set on save, never navigated (mapper reads the account_type column above). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_type_id")
+    private AccountTypeJpaEntity accountTypeRef;
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance;

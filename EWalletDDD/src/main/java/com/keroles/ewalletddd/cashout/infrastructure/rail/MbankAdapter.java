@@ -1,6 +1,6 @@
 package com.keroles.ewalletddd.cashout.infrastructure.rail;
 
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailPort;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailPort;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Mbank — SYNCHRONOUS bank rail: dispatch settles the payout and returns the final result,
+ * Mbank — SYNCHRONOUS bank rail: dispatch settles the cashout and returns the final result,
  * no webhook/callback. ponytail: fake — logs and returns CONFIRMED. Wire the real sync client in step 4.
  */
 @Component
-public class MbankAdapter implements PayoutRailPort {
+public class MbankAdapter implements CashoutRailPort {
 
     private static final Logger log = LoggerFactory.getLogger(MbankAdapter.class);
 

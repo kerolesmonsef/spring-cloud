@@ -11,7 +11,7 @@
    - Each account: **main balance** + **hold balance**.
    - Cashout lifecycle on ledger: **reserve** (main→hold) → **settle** (hold→0, success) | **release** (hold→main, failure).
 2. **Onboarding** — ~5 sequential steps, resume from last completed, profile status "onboarding" until done. Onboarding→Ledger integration: **async event** (OnboardingCompleted → open wallet), never sync.
-3. **Cashout** — CashoutId UUID VO. State machine RESERVED → DISPATCHED → CONFIRMED/FAILED (+ PENDING_REVIEW/REJECTED for compliance). ONE `PayoutRailPort`, 3 ACL adapters: **Aani** (UAE NPSS, ISO 20022, sync-ish, irreversible), **LuLu** (async, correspondent, webhook), **Mbank**. Rails normalized to async **inside the adapters** — dispatch always returns PENDING, outcome always arrives as RailConfirmed/RailFailed event. Cashout talks to Ledger only via `LedgerAccountPort` → Ledger's application service (the front door).
+3. **Cashout** — CashoutId UUID VO. State machine RESERVED → DISPATCHED → CONFIRMED/FAILED (+ PENDING_REVIEW/REJECTED for compliance). ONE `CashoutRailPort`, 3 ACL adapters: **Aani** (UAE NPSS, ISO 20022, sync-ish, irreversible), **LuLu** (async, correspondent, webhook), **Mbank**. Rails normalized to async **inside the adapters** — dispatch always returns PENDING, outcome always arrives as RailConfirmed/RailFailed event. Cashout talks to Ledger only via `LedgerAccountPort` → Ledger's application service (the front door).
 
 ## Architecture laws (agreed, apply everywhere)
 
@@ -30,7 +30,7 @@
 
 - [x] **1. Accounting domain layer** (2026-07-17)
 - [x] **2. Accounting full layers** — application front door, JPA adapters (Option B + @Version), REST edge, H2 (2026-07-17)
-- [x] **3. Cashout context** — CashoutRequest aggregate (state machine), PayoutRailPort + registry, LedgerAccountPort ACL, all 3 rail fakes, c_ persistence, REST edge. Vertical slice with **simulated** callback (confirm/fail app methods). (2026-07-18)
+- [x] **3. Cashout context** — CashoutRequest aggregate (state machine), CashoutRailPort + registry, LedgerAccountPort ACL, all 3 rail fakes, c_ persistence, REST edge. Vertical slice with **simulated** callback (confirm/fail app methods). (2026-07-18)
 - [ ] 4. Rail webhooks + normalize-to-async in adapters; RailConfirmed/RailFailed → settle/release (saga spine) — replaces the confirm/fail methods
 - [ ] 5. Domain events across contexts + Outbox pattern (replace in-process ApplicationEventPublisher)
 - [ ] 6. Onboarding context — sequential steps, resume, OnboardingCompleted event → open account
@@ -72,18 +72,20 @@ com.keroles.ewalletddd/
     domain/event/                   CashoutRequestedEvent, CashoutDispatchedEvent, CashoutConfirmedEvent, CashoutFailedEvent
     domain/exception/               IllegalCashoutStateException (extends IllegalStateException → 409)
     domain/repository/              CashoutRepository (port)
-    domain/port/                    LedgerAccountPort, PayoutRailPort (+RailDispatchResult), PayoutRailRegistry
+    domain/port/                    LedgerAccountPort, CashoutRailPort (+RailDispatchResult), CashoutRailRegistry
     application/                    CashoutApplicationService — THE front door:
                                     requestCashout(account,money,rail)→CashoutId, confirm(id), fail(id), get(id)
     infrastructure/persistence/     entity/mapper/repository/adapter (Option B, c_cashout_requests, @Version)
     infrastructure/ledger/          LedgerAccountAdapter — the ACL, ONLY cashout class importing accounting.*
-    infrastructure/rail/            AaniAdapter, LuLuAdapter, MbankAdapter (fakes), SpringPayoutRailRegistry
+    infrastructure/rail/            AaniAdapter, LuLuAdapter, MbankAdapter (fakes), SpringCashoutRailRegistry
     presentation/                   CashoutController (POST /cashouts, GET, POST /{id}/confirm|/fail),
                                     requests/ (CreateCashoutRequest), responses/ (CashoutResponse),
                                     CashoutExceptionHandler (scoped)
 ```
 
 Notes:
+- **Reference data (accounting-owned lookup)**: `a_account_types` (seeded `system`, `user`) + `a_currencies` (seeded from `default.currency` + ETH/SOL/BTC). Plain JPA in `accounting/infrastructure/reference/` (entities + Spring Data repos + `ReferenceDataSeeder` CommandLineRunner, existence-checked/idempotent).
+- **Account ↔ reference links**: `Account` aggregate now carries an `AccountType` enum (valueObject, `SYSTEM`/`USER`), `Account.open` defaults `USER`. `a_accounts` FKs `currency_id`→a_currencies, `account_type_id`→a_account_types (both nullable — ddl-auto can't back-fill legacy rows; new accounts always set them). The domain still speaks `java.util.Currency`/enum; the FKs are resolved at INSERT in `JpaAccountRepositoryAdapter` (findByCode/findByName, cold-path), and the `currency`(char3)/`account_type`(name) scalar columns remain the mapper's read source (FK associations never navigated). Unseeded currency at open → `IllegalArgumentException("Unsupported currency: ...")`.
 - `openAccount(userId?, currency)`: userId null -> registers new (minimal) User + account; userId given -> must exist. `a_accounts.user_id` is a real FK to `a_users` (JPA: lazy @ManyToOne only for the constraint + read-only mirror `user_id` column for mapping; adapter uses `getReferenceById` so no user SELECT on save).
 - **Ids**: AccountId/UserId are Long, DB auto-increment. Consequence: aggregate id is null until first save; adapter calls `assignId()` after INSERT; `AccountOpenedEvent` is raised by the APP SERVICE after save (documented exception to "events raised in aggregate" — the id is born in the DB). TransactionId stays UUID (domain-generated, char(36)).
 - `reserve()` creates PENDING ledger Transaction + hold in ONE DB transaction (no double-spend); settle/release complete/fail it — Transaction status guard = idempotency (proven by `duplicateSettleIsRejected` test).
@@ -94,7 +96,7 @@ Notes:
 
 Cashout step-3 specifics:
 - **ACL**: `cashout.infrastructure.ledger.LedgerAccountAdapter` is the ONLY cashout class importing `accounting.*` (the front door + the `AccountId`/`TransactionId` id VOs as published language). `cashout.domain`/`application` know nothing of accounting. Future ArchUnit rule: forbid outside deps on `accounting.domain.model/event/repository` + `accounting.infrastructure`; permit the id VOs + this one adapter reaching `accounting.application`.
-- **Rail extensibility**: `SpringPayoutRailRegistry` self-assembles `Map<Rail,PayoutRailPort>` from all adapter beans. New rail = 1 adapter `@Component` + 1 `Rail` enum value, nothing else.
+- **Rail extensibility**: `SpringCashoutRailRegistry` self-assembles `Map<Rail,CashoutRailPort>` from all adapter beans. New rail = 1 adapter `@Component` + 1 `Rail` enum value, nothing else.
 - **Dispatch outcome is three-way** (`RailDispatchResult.Outcome`): PENDING (async — Aani/LuLu, awaits confirm/fail callback), CONFIRMED (sync — Mbank, settled at dispatch, no callback), REJECTED (refused up front → fail + release). Sync rails walk DISPATCHED→CONFIRMED inside `requestCashout`; the state machine is unchanged, they just don't wait.
 - **Reservation link**: `reserve()` returns the ledger `TransactionId` → stored on CashoutRequest as `LedgerReservationRef`; confirm→`settle(ref)`, fail→`release(ref)`.
 - **Deferred**: real per-rail webhooks + RailConfirmed/RailFailed saga (step 4, replaces confirm/fail methods); compliance states PENDING_REVIEW/REJECTED (step 7); dispatch-after-commit via Outbox (step 5 — today dispatch runs inside the reserve tx because the fake rail is in-process).

@@ -2,8 +2,8 @@ package com.keroles.ewalletddd.cashout.application;
 
 import com.keroles.ewalletddd.cashout.domain.model.CashoutRequest;
 import com.keroles.ewalletddd.cashout.domain.port.LedgerAccountPort;
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailPort;
-import com.keroles.ewalletddd.cashout.domain.port.PayoutRailRegistry;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailPort;
+import com.keroles.ewalletddd.cashout.domain.port.CashoutRailRegistry;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.repository.CashoutRepository;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
@@ -29,7 +29,7 @@ class CashoutRejectAtDispatchTest {
     @Test
     void railRejectsAtDispatch_cashoutFailedAndHoldReleasedNotSettled() {
         RecordingLedger ledger = new RecordingLedger();
-        PayoutRailRegistry rejecting = rail -> new RejectingRail(rail);
+        CashoutRailRegistry rejecting = rail -> new RejectingRail(rail);
         InMemoryCashoutRepo repo = new InMemoryCashoutRepo();
         CashoutApplicationService service =
                 new CashoutApplicationService(repo, ledger, rejecting, event -> {});
@@ -52,7 +52,7 @@ class CashoutRejectAtDispatchTest {
         public void release(LedgerReservationRef r) { released = true; releasedRef = r; }
     }
 
-    record RejectingRail(Rail rail) implements PayoutRailPort {
+    record RejectingRail(Rail rail) implements CashoutRailPort {
         public RailDispatchResult dispatch(CashoutId id, Money amount) {
             return RailDispatchResult.rejected("rail refused");
         }
