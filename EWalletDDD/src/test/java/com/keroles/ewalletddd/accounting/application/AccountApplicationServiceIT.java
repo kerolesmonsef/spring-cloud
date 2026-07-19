@@ -89,50 +89,28 @@ class AccountApplicationServiceIT {
     }
 
     @Test
-    void transferMovesMoneyBetweenAccounts() {
+    void transferHoldsFromSenderAndLeavesReceiverUntouched() {
         AccountId from = fundedAccount("100.00");
         AccountId to = accountApplicationService.openAccount(null, AED);
 
         transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
-        assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
+        assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(from).holdBalance());
+        assertEquals(Money.zero(AED), accountApplicationService.getAccount(to).balance());
     }
 
     @Test
-    void initiateThenSettleTransfer_movesMoney() {
+    void transferSettleMovesHeldMoneyToReceiver() {
         AccountId from = fundedAccount("100.00");
         AccountId to = accountApplicationService.openAccount(null, AED);
-        TransactionId txId = transactionApplicationService.initiateTransfer(from, to, Money.of("30.00", "AED"));
+        TransactionId txId = transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
         transactionApplicationService.settle(txId);
 
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
-    }
-
-    @Test
-    void initiateThenReleaseTransfer_returnsMoney() {
-        AccountId from = fundedAccount("100.00");
-        AccountId to = accountApplicationService.openAccount(null, AED);
-        TransactionId txId = transactionApplicationService.initiateTransfer(from, to, Money.of("30.00", "AED"));
-
-        transactionApplicationService.release(txId);
-
-        assertEquals(Money.of("100.00", "AED"), accountApplicationService.getAccount(from).balance());
-        assertEquals(Money.zero(AED), accountApplicationService.getAccount(from).holdBalance());
-        assertEquals(Money.zero(AED), accountApplicationService.getAccount(to).balance());
-    }
-
-    @Test
-    void cannotSettleTransactionTwice_idempotencyAppliesToTransfer() {
-        AccountId from = fundedAccount("100.00");
-        AccountId to = accountApplicationService.openAccount(null, AED);
-        TransactionId txId = transactionApplicationService.initiateTransfer(from, to, Money.of("30.00", "AED"));
-        transactionApplicationService.settle(txId);
-
-        assertThrows(IllegalStateException.class, () -> transactionApplicationService.settle(txId));
     }
 
     @Test

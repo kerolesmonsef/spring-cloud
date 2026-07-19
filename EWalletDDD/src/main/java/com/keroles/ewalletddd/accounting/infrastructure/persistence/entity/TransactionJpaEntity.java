@@ -59,6 +59,12 @@ public class TransactionJpaEntity {
     @Column(length = 3)
     private String currency;
 
+    @Column(length = 10)
+    private String stage;
+
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID parentCorrelationId;
+
     @Column(nullable = false)
     private Instant createdAt;
 

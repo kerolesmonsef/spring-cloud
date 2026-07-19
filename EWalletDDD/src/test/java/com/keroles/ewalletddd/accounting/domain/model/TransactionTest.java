@@ -29,4 +29,20 @@ class TransactionTest {
         assertEquals(Party.EXTERNAL, tx.sender());
         assertEquals(self, tx.receiver());
     }
+
+    @Test
+    void holdSelfCorrelatesWhenNoParentGiven() {
+        Transaction hold = Transaction.start(Transaction.Type.CASHOUT, self, self, amount, Transaction.Stage.HOLD, null);
+        assertEquals(hold.id(), hold.parentCorrelationId());
+    }
+
+    @Test
+    void settleChildSharesTheHoldsCorrelationId() {
+        Transaction hold = Transaction.start(Transaction.Type.CASHOUT, self, self, amount, Transaction.Stage.HOLD, null);
+        Transaction settlement = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
+                Transaction.Stage.SETTLE, hold.id());
+
+        assertEquals(hold.parentCorrelationId(), settlement.parentCorrelationId());
+        assertNotEquals(hold.id(), settlement.id());
+    }
 }

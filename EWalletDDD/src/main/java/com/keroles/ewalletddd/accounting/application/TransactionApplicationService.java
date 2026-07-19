@@ -18,12 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 // Money movements on the ledger. Each movement writes the Account balances AND its Transaction record in ONE tx.
-//   topup           system -> user   synchronous, one-shot
-//   transfer        user   -> user   synchronous, one-shot
-//   initiateTransfer user  -> user   two-phase: hold now, settle/release on the rail outcome
-//   cashout         user   -> system two-phase: hold now, settle/release on the rail outcome
-// settle/release resolve sender/receiver/amount from the Transaction header (not its entries) — the
-// header is the source of truth; entries are per-account ledger postings (room for future fee/vat legs).
+//   topup    system -> user   synchronous, one-shot
+//   transfer user   -> user   two-phase: HOLD now, SETTLE/RELEASE resolves it later
+//   cashout  user   -> system two-phase: HOLD now, SETTLE/RELEASE resolves it later
+// Two-phase flows are TWO Transaction rows, not one mutated in place: the HOLD row is immutable once
+// written (just its DEBIT entry); settle()/release() write a SEPARATE child row (Stage SETTLE/RELEASE)
+// carrying the resolving entry, sharing parentCorrelationId with the HOLD so the pair/order is queryable
+// by one value. sender/receiver/amount always come from the Transaction header, never its entries —
+// entries are per-account ledger postings (room for future fee/vat legs).
+// settle()/release() are generic over Transaction.Type: they resolve whichever hold the header names
+// (sender/receiver/type), so every two-phase flow — transfer, cashout, and any future type — shares them.
 @Service
 public class TransactionApplicationService {
 
@@ -51,39 +55,24 @@ public class TransactionApplicationService {
         tx.addEntry(user.id(), Transaction.Entry.Direction.CREDIT, amount, user.balance());
         tx.complete();
 
-        saveAll(tx, system, user);
+        saveAll(system, user, tx);
     }
 
-    // user -> user, synchronous. Moves money atomically, neither hold nor settle.
+    // user -> user, two-phase. Holds the funds on `from`; `to` is untouched until settle().
     @Transactional
-    public void transfer(AccountId fromId, AccountId toId, Money amount) {
+    public TransactionId transfer(AccountId fromId, AccountId toId, Money amount) {
         Account from = loadAccount(fromId);
-        Account to = loadAccount(toId);
-        from.withdraw(amount);
-        to.deposit(amount);
-
-        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount);
-        tx.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
-        tx.addEntry(to.id(), Transaction.Entry.Direction.CREDIT, amount, to.balance());
-        tx.complete();
-
-        saveAll(tx, from, to);
-    }
-
-    // user -> user, two-phase. Holds the sender's funds; receiver gets credited only on settle.
-    @Transactional
-    public TransactionId initiateTransfer(AccountId fromId, AccountId toId, Money amount) {
-        Account from = loadAccount(fromId);
-        Account to = loadAccount(toId);
+        Account to = loadAccount(toId); // receiver — also fails fast if it doesn't exist
         from.hold(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount);
-        tx.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
+        Transaction hold = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount,
+                Transaction.Stage.HOLD, null);
+        hold.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
 
         accountRepository.save(from);
-        transactionRepository.save(tx);
+        transactionRepository.save(hold);
         publishEvents(from);
-        return tx.id();
+        return hold.id();
     }
 
     // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
@@ -93,46 +82,54 @@ public class TransactionApplicationService {
         Account system = loadSystemAccount(userAccount.currency()); // receiver — also fails fast if the house account is missing
         userAccount.hold(amount);
 
-        Transaction tx = Transaction.start(Transaction.Type.CASHOUT, partyOf(userAccount), partyOf(system), amount);
-        tx.addEntry(userAccount.id(), Transaction.Entry.Direction.DEBIT, amount, userAccount.balance());
+        Transaction hold = Transaction.start(Transaction.Type.CASHOUT, partyOf(userAccount), partyOf(system), amount,
+                Transaction.Stage.HOLD, null);
+        hold.addEntry(userAccount.id(), Transaction.Entry.Direction.DEBIT, amount, userAccount.balance());
 
         accountRepository.save(userAccount);
-        transactionRepository.save(tx);
+        transactionRepository.save(hold);
         publishEvents(userAccount);
-        return tx.id();
+        return hold.id();
     }
 
     @Transactional
     public void settle(TransactionId txId) {
-        Transaction tx = loadTransaction(txId);
-        if (tx.status() != Transaction.Status.PENDING)
-            throw new IllegalStateException("Transaction is already " + tx.status());
-        if (tx.type() != Transaction.Type.CASHOUT && tx.type() != Transaction.Type.TRANSFER)
-            throw new IllegalArgumentException("Cannot settle " + tx.type() + " transaction");
+        Transaction hold = loadTransaction(txId);
+        if (hold.stage() != Transaction.Stage.HOLD)
+            throw new IllegalArgumentException("Cannot settle a " + hold.type() + " transaction with no pending hold");
+        hold.complete(); // throws if already resolved — fail fast before touching accounts
 
-        Account sender = resolveParty(tx.sender());
-        sender.settle(tx.amount());
-        Account receiver = resolveParty(tx.receiver());
-        receiver.deposit(tx.amount());
-        tx.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, tx.amount(), receiver.balance());
-        tx.complete();
+        Account sender = resolveParty(hold.sender());
+        sender.settle(hold.amount());
+        Account receiver = resolveParty(hold.receiver());
+        receiver.deposit(hold.amount());
 
-        saveAll(tx, sender, receiver);
+        Transaction settlement = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
+                Transaction.Stage.SETTLE, hold.id());
+        settlement.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, hold.amount(), receiver.balance());
+        settlement.complete();
+
+        saveAll(sender, receiver, hold, settlement);
     }
 
     @Transactional
     public void release(TransactionId txId) {
-        Transaction tx = loadTransaction(txId);
-        if (tx.type() != Transaction.Type.CASHOUT && tx.type() != Transaction.Type.TRANSFER)
-            throw new IllegalArgumentException("Cannot release " + tx.type() + " transaction");
+        Transaction hold = loadTransaction(txId);
+        if (hold.stage() != Transaction.Stage.HOLD)
+            throw new IllegalArgumentException("Cannot release a " + hold.type() + " transaction with no pending hold");
+        hold.fail(); // throws if already resolved — fail fast before touching accounts
 
-        tx.fail();
+        Account holder = resolveParty(hold.sender());
+        holder.release(hold.amount());
 
-        Account holder = resolveParty(tx.sender());
-        holder.release(tx.amount());
+        Transaction releaseTx = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
+                Transaction.Stage.RELEASE, hold.id());
+        releaseTx.addEntry(holder.id(), Transaction.Entry.Direction.CREDIT, hold.amount(), holder.balance());
+        releaseTx.complete();
 
         accountRepository.save(holder);
-        transactionRepository.save(tx);
+        transactionRepository.save(hold);
+        transactionRepository.save(releaseTx);
         publishEvents(holder);
     }
 
@@ -150,10 +147,10 @@ public class TransactionApplicationService {
                         + " — seed one before moving money in this currency"));
     }
 
-    private void saveAll(Transaction tx, Account a, Account b) {
+    private void saveAll(Account a, Account b, Transaction... transactions) {
         accountRepository.save(a);
         accountRepository.save(b);
-        transactionRepository.save(tx);
+        for (Transaction tx : transactions) transactionRepository.save(tx);
         publishEvents(a);
         publishEvents(b);
     }

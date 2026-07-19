@@ -20,6 +20,8 @@ public final class TransactionMapper {
                 new Party(row.getSenderReference(), AccountType.valueOf(row.getSenderType())),
                 new Party(row.getReceiverReference(), AccountType.valueOf(row.getReceiverType())),
                 new Money(row.getAmount(), Currency.of(row.getCurrency())),
+                row.getStage() == null ? null : Transaction.Stage.valueOf(row.getStage()),
+                row.getParentCorrelationId() == null ? null : new TransactionId(row.getParentCorrelationId()),
                 Transaction.Status.valueOf(row.getStatus()),
                 row.getCreatedAt(),
                 row.getEntries().stream().map(TransactionMapper::entryToDomain).toList());
@@ -44,6 +46,8 @@ public final class TransactionMapper {
         row.setReceiverType(tx.receiver().type().name());
         row.setAmount(tx.amount().amount());
         row.setCurrency(tx.amount().currency().code());
+        row.setStage(tx.stage() == null ? null : tx.stage().name());
+        row.setParentCorrelationId(tx.parentCorrelationId() == null ? null : tx.parentCorrelationId().value());
         row.setCreatedAt(tx.createdAt());
         // Entries are append-only; only add the ones the row doesn't have yet.
         for (int i = row.getEntries().size(); i < tx.entries().size(); i++) {

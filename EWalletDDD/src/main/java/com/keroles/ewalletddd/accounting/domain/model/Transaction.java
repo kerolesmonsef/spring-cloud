@@ -13,6 +13,7 @@ public class Transaction {
 
     public enum Type { DEPOSIT, WITHDRAWAL, TOPUP, TRANSFER, CASHOUT }
     public enum Status { PENDING, COMPLETED, FAILED }
+    public enum Stage { HOLD, SETTLE, RELEASE }
 
     public record Entry(AccountId accountId, Direction direction, Money amount, Money balanceAfter) {
         public enum Direction { DEBIT, CREDIT } // DEBIT = money out of account, CREDIT = money in
@@ -23,29 +24,43 @@ public class Transaction {
     private final Party sender;    // business party money moved FROM (may be EXTERNAL — not a held account)
     private final Party receiver;  // business party money moved TO   (may be EXTERNAL)
     private final Money amount;    // the transaction's principal — source of truth, NOT derived from entries
+    private final Stage stage;
+    private final TransactionId parentCorrelationId;
     private final Instant createdAt;
     private Status status;
 
     private final List<Entry> entries = new ArrayList<>();
 
-    private Transaction(TransactionId id, Type type, Party sender, Party receiver, Money amount, Status status,
-                         Instant createdAt) {
+    private Transaction(TransactionId id, Type type, Party sender, Party receiver, Money amount, Stage stage,
+                         TransactionId parentCorrelationId, Status status, Instant createdAt) {
         this.id = id;
         this.type = type;
         this.sender = sender;
         this.receiver = receiver;
         this.amount = amount;
+        this.stage = stage;
+        this.parentCorrelationId = parentCorrelationId;
         this.status = status;
         this.createdAt = createdAt;
     }
 
     public static Transaction start(Type type, Party sender, Party receiver, Money amount) {
-        return new Transaction(TransactionId.newId(), type, sender, receiver, amount, Status.PENDING, Instant.now());
+        return start(type, sender, receiver, amount, null, null);
+    }
+
+    // parentCorrelationId null -> self-correlated (this row starts a new order, e.g. a HOLD).
+    // Pass the HOLD's id here when starting its SETTLE/RELEASE child, so both share one correlation id.
+    public static Transaction start(Type type, Party sender, Party receiver, Money amount, Stage stage,
+                                    TransactionId parentCorrelationId) {
+        TransactionId id = TransactionId.newId();
+        TransactionId correlationId = parentCorrelationId != null ? parentCorrelationId : id;
+        return new Transaction(id, type, sender, receiver, amount, stage, correlationId, Status.PENDING, Instant.now());
     }
 
     public static Transaction restore(TransactionId id, Type type, Party sender, Party receiver, Money amount,
-                                      Status status, Instant createdAt, List<Entry> entries) {
-        Transaction tx = new Transaction(id, type, sender, receiver, amount, status, createdAt);
+                                      Stage stage, TransactionId parentCorrelationId, Status status,
+                                      Instant createdAt, List<Entry> entries) {
+        Transaction tx = new Transaction(id, type, sender, receiver, amount, stage, parentCorrelationId, status, createdAt);
         tx.entries.addAll(entries);
         return tx;
     }
@@ -85,6 +100,8 @@ public class Transaction {
     public Party sender() { return sender; }
     public Party receiver() { return receiver; }
     public Money amount() { return amount; }
+    public Stage stage() { return stage; }
+    public TransactionId parentCorrelationId() { return parentCorrelationId; }
     public Status status() { return status; }
     public Instant createdAt() { return createdAt; }
     public List<Entry> entries() { return List.copyOf(entries); }
