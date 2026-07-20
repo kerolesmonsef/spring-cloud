@@ -24,7 +24,7 @@ class AccountTest {
         Account a = Account.open(new UserId(1L), AED);
         Account b = Account.open(new UserId(1L), AED);
         assertNotNull(a.reference().value());
-        assertNotEquals(a.reference(), b.reference()); // random per account
+        assertNotEquals(a.reference(), b.reference()); 
     }
 
     @Test
@@ -69,7 +69,7 @@ class AccountTest {
     void businessVerbsRaiseDomainEvents() {
         Account a = accountWith("100.00");
         a.hold(Money.of("40.00", "AED"));
-        assertEquals(2, a.pullEvents().size()); // MoneyDepositedEvent, FundsHeldEvent (AccountOpenedEvent raised by app service after save — id born in DB)
-        assertTrue(a.pullEvents().isEmpty());   // pull clears the buffer
+        assertEquals(2, a.pullEvents().size()); 
+        assertTrue(a.pullEvents().isEmpty());   
     }
 }

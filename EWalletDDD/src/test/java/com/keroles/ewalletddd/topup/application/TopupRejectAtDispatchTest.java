@@ -21,8 +21,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-// Pure-fakes test for the reject-at-dispatch branch — the only path where a rail refuses up front.
-// The Spring IT can't reach it (real fakes return PENDING/CONFIRMED, never REJECTED).
+
+
 class TopupRejectAtDispatchTest {
 
     @Test
@@ -43,7 +43,7 @@ class TopupRejectAtDispatchTest {
 
     static class RecordingLedger implements LedgerTopupPort {
         boolean credited;
-        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount) {
+        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount, TopupId idempotencyKey) {
             credited = true;
             return new LedgerTransactionRef(UUID.randomUUID());
         }

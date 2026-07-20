@@ -10,10 +10,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Self-assembles the rail routing map from every CashoutRailPort bean.
- * Onboarding rail #4 = one new adapter @Component + one Rail enum value; nothing here changes.
- */
+
 @Component
 public class SpringCashoutRailRegistry implements CashoutRailRegistry {
 

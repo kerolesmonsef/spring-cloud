@@ -14,12 +14,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-// Seeds accounting reference data + house accounts on startup. Repo-only (no domain aggregate), existence-checked/idempotent.
+
 @Component
 public class ReferenceDataSeeder implements CommandLineRunner {
 
-    // Large genesis: topup draws user funding from here, and (MySQL) ITs commit + the seed is idempotent
-    // (never refilled), so a small float would deplete across runs -> spurious InsufficientBalanceException.
+    
+    
     private static final BigDecimal SYSTEM_ACCOUNT_SEED = new BigDecimal("1000000000");
     private static final String SYSTEM_TYPE = "system";
 
@@ -41,7 +41,7 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         this.defaultCurrency = defaultCurrency;
     }
 
-    // one tx so the get-or-create'd type/currency rows stay managed for the account inserts below
+    
     @Override
     @Transactional
     public void run(String... args) {
@@ -49,14 +49,14 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         seedType("user");
 
         List<String> supported = List.of(defaultCurrency, "ETH", "SOL", "BTC");
-        UserJpaEntity systemUser = systemUser(); // one shared owner for all house accounts
+        UserJpaEntity systemUser = systemUser(); 
         for (String code : supported) {
             CurrencyJpaEntity currency = seedCurrency(code);
-            ensureSystemAccount(systemType, currency, systemUser); // one per currency, funded 1000
+            ensureSystemAccount(systemType, currency, systemUser); 
         }
     }
 
-    // check-if-exists then create — type=SYSTEM + currency is the uniqueness key
+    
     private void ensureSystemAccount(AccountTypeJpaEntity systemType, CurrencyJpaEntity currency, UserJpaEntity owner) {
         if (accounts.existsByAccountTypeAndCurrency(SYSTEM_TYPE, currency.getCode())) return;
         AccountJpaEntity row = new AccountJpaEntity();
@@ -71,7 +71,7 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         accounts.save(row);
     }
 
-    // reuse the owner of any existing system account (re-runs add no orphan users); else create one
+    
     private UserJpaEntity systemUser() {
         return accounts.findFirstByAccountType(SYSTEM_TYPE)
                 .map(a -> users.getReferenceById(a.getUserId()))

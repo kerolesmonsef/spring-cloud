@@ -14,13 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-// Account lifecycle + queries. Money movements live in TransactionApplicationService.
+
 @Service
 public class AccountApplicationService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
-    private final ApplicationEventPublisher eventPublisher; // ponytail: in-process events; Outbox pattern when we need reliability across services
+    private final ApplicationEventPublisher eventPublisher; 
 
     public AccountApplicationService(AccountRepository accounts,
                                      UserRepository users,
@@ -34,11 +34,11 @@ public class AccountApplicationService {
     public AccountId openAccount(UserId userId, Currency currency) {
         UserId owner = (userId == null) ? registerUser() : existingUser(userId);
         accountRepository.findByUserAndCurrency(owner, currency).ifPresent(existing -> {
-            throw new IllegalStateException("User already has a " + currency + " account"); // TODO is this legal to throw here ?
+            throw new IllegalStateException("User already has a " + currency + " account"); 
         });
         Account account = Account.open(owner, currency);
-        accountRepository.save(account); // adapter assigns the auto-increment id back onto the aggregate
-        // raised here, not in Account.open(): the id is born in the DB, so the event can't exist before save
+        accountRepository.save(account); 
+        
         eventPublisher.publishEvent(new AccountOpenedEvent(account.id(), owner, currency));
         publishEvents(account);
         return account.id();

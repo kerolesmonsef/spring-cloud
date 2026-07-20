@@ -18,13 +18,13 @@ import java.util.List;
 
 public class Account {
 
-    private AccountId id; // null until first save — DB auto-increment births the identity
-    private final AccountReference reference; // stable public UUID, born in the domain (not the DB)
+    private AccountId id; 
+    private final AccountReference reference; 
     private final UserId userId;
     private final Currency currency;
     private final AccountType type;
     private Money balance;
-    private Money holdBalance;  // reserved for in-flight transactions
+    private Money holdBalance;  
     private final List<Object> events = new ArrayList<>();
 
     private Account(AccountId id, AccountReference reference, UserId userId, Currency currency, AccountType type, Money balance, Money holdBalance) {
@@ -38,7 +38,7 @@ public class Account {
     }
 
     public static Account open(UserId userId, Currency currency) {
-        // AccountOpenedEvent is raised by the app service AFTER save — id doesn't exist yet here
+        
         return new Account(null, AccountReference.newRef(), userId, currency, AccountType.USER, Money.zero(currency), Money.zero(currency));
     }
 
@@ -74,7 +74,7 @@ public class Account {
 
     public void settle(Money amount) {
         assertCurrency(amount);
-        holdBalance = holdBalance.subtract(amount); // Money VO rejects negative result
+        holdBalance = holdBalance.subtract(amount); 
         events.add(new FundsSettledEvent(id, amount, balance, holdBalance));
     }
 

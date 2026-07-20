@@ -29,7 +29,7 @@ import java.util.UUID;
 public class TransactionJpaEntity {
 
     @Id
-    @JdbcTypeCode(SqlTypes.CHAR)   // char(36) instead of binary(16) — readable in SQL
+    @JdbcTypeCode(SqlTypes.CHAR)   
     private UUID id;
 
     @Column(nullable = false, length = 20)
@@ -50,7 +50,7 @@ public class TransactionJpaEntity {
     @Column(nullable = false, length = 20)
     private String receiverType;
 
-    // ponytail: nullable — added to an existing live table, can't back-fill pre-existing rows
+    
     @Column(precision = 19, scale = 4)
     private BigDecimal amount;
 
@@ -69,13 +69,13 @@ public class TransactionJpaEntity {
     @Version
     private Long version;
 
-    /** Entries live and die with their transaction — one aggregate, one cascade. */
+    
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "transaction_id", nullable = false)
     @OrderColumn(name = "position")
     private List<TransactionEntryJpaEntity> entries = new ArrayList<>();
 
-    /** Transfers live and die with their transaction — one aggregate, one cascade. */
+    
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "transaction_id", nullable = false)
     @OrderColumn(name = "position")

@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-/** Option B save: load-then-copy onto the managed entity. TopupId is domain-generated, so no id hand-back needed. */
+
 @Component
 public class JpaTopupRepositoryAdapter implements TopupRepository {
 

@@ -17,17 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-// Money movements on the ledger. Each movement writes the Account balances AND its Transaction record in ONE tx.
-//   topup    system -> user   synchronous, one-shot
-//   transfer user   -> user   two-phase: HOLD now, SETTLE/RELEASE resolves it later
-//   cashout  user   -> system two-phase: HOLD now, SETTLE/RELEASE resolves it later
-// Two-phase flows are TWO Transaction rows, not one mutated in place: the HOLD row is immutable once
-// written (just its DEBIT entry); settle()/release() write a SEPARATE child row (Stage SETTLE/RELEASE)
-// carrying the resolving entry, sharing parentCorrelationId with the HOLD so the pair/order is queryable
-// by one value. sender/receiver/amount always come from the Transaction header, never its entries —
-// entries are per-account ledger postings (room for future fee/vat legs).
-// settle()/release() are generic over Transaction.Type: they resolve whichever hold the header names
-// (sender/receiver/type), so every two-phase flow — transfer, cashout, and any future type — shares them.
+
+
+
+
+
+
+
+
+
+
+
 @Service
 public class TransactionApplicationService {
 
@@ -60,11 +60,11 @@ public class TransactionApplicationService {
         return tx.id();
     }
 
-    // user -> user, two-phase. Holds the funds on `from`; `to` is untouched until settle().
+    
     @Transactional
     public TransactionId transfer(AccountId fromId, AccountId toId, Money amount) {
         Account fromAccount = loadAccount(fromId);
-        Account toAccount = loadAccount(toId); // receiver — also fails fast if it doesn't exist
+        Account toAccount = loadAccount(toId); 
         fromAccount.hold(amount);
 
         Transaction holdTransaction = Transaction.start(Transaction.Type.TRANSFER, partyOf(fromAccount), partyOf(toAccount), amount,
@@ -77,11 +77,11 @@ public class TransactionApplicationService {
         return holdTransaction.id();
     }
 
-    // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
+    
     @Transactional
     public TransactionId cashout(AccountId userAccountId, Money amount) {
         Account userAccount = loadAccount(userAccountId);
-        Account system = loadSystemAccount(userAccount.currency()); // receiver — also fails fast if the house account is missing
+        Account system = loadSystemAccount(userAccount.currency()); 
         userAccount.hold(amount);
 
         Transaction hold = Transaction.start(Transaction.Type.CASHOUT, partyOf(userAccount), partyOf(system), amount,
@@ -99,7 +99,7 @@ public class TransactionApplicationService {
         Transaction holdTransaction = loadTransaction(txId);
         if (holdTransaction.stage() != Transaction.Stage.HOLD)
             throw new IllegalArgumentException("Cannot settle a " + holdTransaction.type() + " transaction with no pending hold");
-        holdTransaction.complete(); // throws if already resolved — fail fast before touching accounts
+        holdTransaction.complete(); 
 
         Account sender = resolveParty(holdTransaction.sender());
         Account receiver = resolveParty(holdTransaction.receiver());
@@ -119,8 +119,8 @@ public class TransactionApplicationService {
     private void settleByType(Transaction.Type type, Account sender, Account receiver, Money amount) {
         switch (type) {
             case CASHOUT, TRANSFER -> {
-                sender.settle(amount);    // hold resolved successfully — clear it, money already left the balance
-                receiver.deposit(amount); // ...and lands with the receiver (system for cashout, the other user for transfer)
+                sender.settle(amount);    
+                receiver.deposit(amount); 
             }
             default -> throw new IllegalArgumentException("No settle handling for " + type);
         }
@@ -131,7 +131,7 @@ public class TransactionApplicationService {
         Transaction hold = loadTransaction(txId);
         if (hold.stage() != Transaction.Stage.HOLD)
             throw new IllegalArgumentException("Cannot release a " + hold.type() + " transaction with no pending hold");
-        hold.fail(); // throws if already resolved — fail fast before touching accounts
+        hold.fail(); 
 
         Account holder = resolveParty(hold.sender());
         releaseByType(hold.type(), holder, hold.amount());
@@ -149,13 +149,13 @@ public class TransactionApplicationService {
 
     private void releaseByType(Transaction.Type type, Account holder, Money amount) {
         switch (type) {
-            case CASHOUT, TRANSFER -> holder.release(amount); // undo the hold — only the sender was ever touched
+            case CASHOUT, TRANSFER -> holder.release(amount); 
             default -> throw new IllegalArgumentException("No release handling for " + type);
         }
     }
 
-    // Resolves an internal Party (sender or receiver) back to the Account it names — the Transaction
-    // header, not its entries, is the source of truth for who's involved and how much moved.
+    
+    
     private Account resolveParty(Party party) {
         AccountReference ref = new AccountReference(UUID.fromString(party.reference()));
         return accountRepository.findByReference(ref)

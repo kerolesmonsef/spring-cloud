@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 
 public record Money(BigDecimal amount, Currency currency) {
 
-    // ponytail: fixed 2dp for now — per-currency precision (crypto wants 8–18) needs a_currencies.fraction_digits
-    // AND wider money columns (currently scale 4). Add both when real crypto amounts flow, not for whole-number seeds.
+    
+    
     private static final int SCALE = 2;
 
     public Money {
@@ -29,7 +29,7 @@ public record Money(BigDecimal amount, Currency currency) {
 
     public Money subtract(Money other) {
         assertSameCurrency(other);
-        return new Money(amount.subtract(other.amount), currency); // constructor rejects negative result
+        return new Money(amount.subtract(other.amount), currency); 
     }
 
     public boolean isLessThan(Money other) {

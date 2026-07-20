@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 
-/** Implements the domain port. Option B save: load-then-copy onto the managed entity — domain stays version-free. */
+
 @Component
 public class JpaAccountRepositoryAdapter implements AccountRepository {
 
@@ -63,21 +63,21 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
     public void save(Account account) {
         boolean isNew = account.id() == null;
         AccountJpaEntity row = isNew
-                ? new AccountJpaEntity()             // new aggregate -> INSERT, DB generates id
+                ? new AccountJpaEntity()             
                 : jpa.findById(account.id().value())
                       .orElseThrow(() -> new IllegalStateException("Account row vanished: " + account.id().value()));
-        // getReferenceById = proxy holding only the id; sets FK without SELECTing the user
+        
         AccountMapper.copyOnto(account, row, userJpa.getReferenceById(account.userId().value()));
         if (isNew) {
-            // currency/type are immutable after open — resolve the reference-table FKs only on INSERT
+            
             linkReferenceData(account, row);
         }
         AccountJpaEntity saved = jpa.save(row);
         if (isNew) {
-            account.assignId(new AccountId(saved.getId())); // hand the DB-born identity back to the aggregate
-            // populate the read-only user_id mirror on the in-persistence-context instance: a same-tx reload
-            // (open-then-fund in one @Transactional) would otherwise read null and NPE on getReferenceById.
-            // Harmless: user_id is insertable=false, Hibernate never writes from this field.
+            account.assignId(new AccountId(saved.getId())); 
+            
+            
+            
             saved.setUserId(account.userId().value());
         }
     }

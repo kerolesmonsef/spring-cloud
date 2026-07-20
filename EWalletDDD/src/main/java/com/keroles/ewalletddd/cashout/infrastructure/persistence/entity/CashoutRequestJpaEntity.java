@@ -23,7 +23,7 @@ import java.util.UUID;
 public class CashoutRequestJpaEntity {
 
     @Id
-    @JdbcTypeCode(SqlTypes.CHAR)   // char(36) instead of binary(16) — readable in SQL
+    @JdbcTypeCode(SqlTypes.CHAR)   
     private UUID id;
 
     @Column(nullable = false)
@@ -45,8 +45,12 @@ public class CashoutRequestJpaEntity {
     @Column(nullable = false, length = 36)
     private UUID ledgerReservationRef;
 
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36) 
+    private UUID ledgerSettleRef;
+
     @Column(length = 100)
-    private String railReference; // null until dispatched
+    private String railReference; 
 
     @Column(nullable = false)
     private Instant createdAt;

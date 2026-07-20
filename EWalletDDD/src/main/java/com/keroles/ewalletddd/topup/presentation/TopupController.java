@@ -44,7 +44,7 @@ public class TopupController {
         return TopupResponse.from(topupService.get(new TopupId(UUID.fromString(id))));
     }
 
-    // simulate the async rail outcome (temporary — becomes webhook-driven when the saga lands)
+    
     @PostMapping("/{id}/confirm")
     public TopupResponse confirm(@PathVariable String id) {
         TopupId topupId = new TopupId(UUID.fromString(id));

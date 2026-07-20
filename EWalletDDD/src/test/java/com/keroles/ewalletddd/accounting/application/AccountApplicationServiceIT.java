@@ -31,12 +31,12 @@ class AccountApplicationServiceIT {
     private final Currency AED = Currency.of("AED");
 
     private AccountId fundedAccount(String amount) {
-        AccountId id = accountApplicationService.openAccount(null, AED); // null -> registers a new user too
+        AccountId id = accountApplicationService.openAccount(null, AED); 
         transactionApplicationService.topup(id, Money.of(amount, "AED"));
         return id;
     }
 
-    // system account is a shared, never-reset seed row — assert the delta settle() adds, not an absolute value
+    
     private Money systemBalance() {
         return accountRepository.findByTypeAndCurrency(AccountType.SYSTEM, AED)
                 .orElseThrow().balance();
@@ -49,7 +49,7 @@ class AccountApplicationServiceIT {
         transactionApplicationService.topup(accountId, Money.of("100.00", "AED"));
         transactionApplicationService.topup(accountId, Money.of("50.00", "AED"));
 
-        assertEquals(1, accountApplicationService.getUserAccounts(user).size()); // still ONE row
+        assertEquals(1, accountApplicationService.getUserAccounts(user).size()); 
         assertEquals(Money.of("150.00", "AED"), accountApplicationService.getAccount(accountId).balance());
     }
 
@@ -70,9 +70,9 @@ class AccountApplicationServiceIT {
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("60.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
-        assertEquals(systemBefore.add(Money.of("40.00", "AED")), systemBalance()); // settled cashout lands with system
+        assertEquals(systemBefore.add(Money.of("40.00", "AED")), systemBalance()); 
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // hold row itself never gets one
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
     }
 
     @Test
@@ -86,9 +86,9 @@ class AccountApplicationServiceIT {
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("100.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
-        assertEquals(systemBefore, systemBalance()); // released cashout never touches the receiver
+        assertEquals(systemBefore, systemBalance()); 
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // release is not a success
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
     }
 
     @Test
@@ -98,7 +98,7 @@ class AccountApplicationServiceIT {
         transactionApplicationService.settle(txId);
 
         assertThrows(IllegalStateException.class, () -> transactionApplicationService.settle(txId));
-        assertEquals(Money.zero(AED), accountApplicationService.getAccount(id).holdBalance()); // settled once, not twice
+        assertEquals(Money.zero(AED), accountApplicationService.getAccount(id).holdBalance()); 
     }
 
     @Test
@@ -118,7 +118,7 @@ class AccountApplicationServiceIT {
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(to).balance());
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // still pending, no transfer row yet
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
     }
 
     @Test
@@ -133,7 +133,7 @@ class AccountApplicationServiceIT {
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // hold row itself never gets one
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
         var transfers = transactionRepository.findById(settlementId).orElseThrow().transfers();
         assertEquals(1, transfers.size());
         Transaction.Transfer transfer = transfers.get(0);

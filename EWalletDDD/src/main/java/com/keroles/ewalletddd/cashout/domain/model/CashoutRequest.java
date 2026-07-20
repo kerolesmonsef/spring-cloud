@@ -5,10 +5,7 @@ import com.keroles.ewalletddd.cashout.domain.event.CashoutDispatchedEvent;
 import com.keroles.ewalletddd.cashout.domain.event.CashoutFailedEvent;
 import com.keroles.ewalletddd.cashout.domain.event.CashoutRequestedEvent;
 import com.keroles.ewalletddd.cashout.domain.exception.IllegalCashoutStateException;
-import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
+import com.keroles.ewalletddd.cashout.domain.valueObject.*;
 import com.keroles.ewalletddd.shared.domain.Money;
 
 import java.time.Instant;
@@ -23,10 +20,11 @@ public class CashoutRequest {
     private final LedgerAccountRef account;
     private final Money amount;
     private final Rail rail;
-    private final LedgerReservationRef reservationRef; // Ledger hold, placed before the aggregate exists
+    private final LedgerReservationRef reservationRef; 
     private final Instant createdAt;
     private Status status;
-    private String railReference; // null until dispatched
+    private String railReference; 
+    private LedgerSettleRef settleReference; 
     private final List<Object> events = new ArrayList<>();
 
     private CashoutRequest(CashoutId id, LedgerAccountRef account, Money amount, Rail rail,
@@ -41,7 +39,7 @@ public class CashoutRequest {
         this.createdAt = createdAt;
     }
 
-    // funds are already held on the Ledger (reservationRef) by the time we build the request
+    
     public static CashoutRequest request(LedgerAccountRef account, Money amount, Rail rail, LedgerReservationRef reservationRef) {
         CashoutRequest c = new CashoutRequest(CashoutId.newId(), account, amount, rail,
                 reservationRef, Status.RESERVED, null, Instant.now());
@@ -61,13 +59,14 @@ public class CashoutRequest {
         events.add(new CashoutDispatchedEvent(id, rail, railReference));
     }
 
-    public void confirm() {
-        requireStatus(Status.DISPATCHED);
+    public void confirm(LedgerSettleRef settleReference) {
+        requireStatus(Status.DISPATCHED); 
+        this.settleReference = settleReference; 
         status = Status.CONFIRMED;
-        events.add(new CashoutConfirmedEvent(id, reservationRef));
+        events.add(new CashoutConfirmedEvent(id, reservationRef, settleReference));
     }
 
-    // fail from RESERVED (rail rejected at dispatch) or DISPATCHED (rail reported failure)
+    
     public void fail() {
         if (status != Status.RESERVED && status != Status.DISPATCHED)
             throw new IllegalCashoutStateException("Cannot fail cashout " + id.value() + " in state " + status);
@@ -94,4 +93,5 @@ public class CashoutRequest {
     public Status status() { return status; }
     public String railReference() { return railReference; }
     public Instant createdAt() { return createdAt; }
+    public LedgerSettleRef settleReference() { return settleReference; }
 }

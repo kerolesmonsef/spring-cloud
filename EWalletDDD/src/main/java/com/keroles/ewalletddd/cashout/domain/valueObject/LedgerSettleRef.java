@@ -2,5 +2,4 @@ package com.keroles.ewalletddd.cashout.domain.valueObject;
 
 import java.util.UUID;
 
-
-public record LedgerReservationRef(UUID value) {}
+public record LedgerSettleRef(UUID value) {}

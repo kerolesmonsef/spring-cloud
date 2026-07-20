@@ -51,7 +51,7 @@ public class AccountController {
                 .stream().map(AccountResponse::from).toList();
     }
 
-    // fund a wallet from the house account (system -> user)
+    
     @PostMapping("/{id}/topup")
     public AccountResponse topup(@PathVariable Long id, @RequestBody MoneyRequest request) {
         AccountId accountId = new AccountId(id);
@@ -60,7 +60,7 @@ public class AccountController {
         return AccountResponse.from(accountService.getAccount(accountId));
     }
 
-    // user -> user
+    
     @PostMapping("/{id}/transfer/{toId}")
     public AccountResponse transfer(@PathVariable Long id, @PathVariable Long toId, @RequestBody MoneyRequest request) {
         AccountId fromId = new AccountId(id);

@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// ponytail: plain lookup table, not a DDD aggregate. Accounting-owned (a_ prefix per repo law). Wire a_accounts FK when actually used.
+
 @Entity
 @Table(name = "a_account_types")
 @Getter

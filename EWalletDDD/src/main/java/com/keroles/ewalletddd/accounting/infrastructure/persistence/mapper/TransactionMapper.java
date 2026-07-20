@@ -60,11 +60,11 @@ public final class TransactionMapper {
         row.setStage(tx.stage() == null ? null : tx.stage().name());
         row.setParentCorrelationId(tx.parentCorrelationId() == null ? null : tx.parentCorrelationId().value());
         row.setCreatedAt(tx.createdAt());
-        // Entries are append-only; only add the ones the row doesn't have yet.
+        
         for (int i = row.getEntries().size(); i < tx.entries().size(); i++) {
             row.getEntries().add(entryToRow(tx.entries().get(i)));
         }
-        // Transfers are append-only; only add the ones the row doesn't have yet.
+        
         for (int i = row.getTransfers().size(); i < tx.transfers().size(); i++) {
             row.getTransfers().add(transferToRow(tx.transfers().get(i)));
         }

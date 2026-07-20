@@ -6,10 +6,7 @@ import com.keroles.ewalletddd.cashout.domain.port.CashoutRailPort;
 import com.keroles.ewalletddd.cashout.domain.port.CashoutRailRegistry;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.repository.CashoutRepository;
-import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
+import com.keroles.ewalletddd.cashout.domain.valueObject.*;
 import com.keroles.ewalletddd.shared.domain.Money;
 import org.junit.jupiter.api.Test;
 
@@ -22,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Pure-fakes test for the reject-at-dispatch ROLLBACK branch — the only path where release()
-// runs in the same call as reserve(). The Spring IT can't reach it (all real fakes return PENDING).
+
+
 class CashoutRejectAtDispatchTest {
 
     @Test
@@ -49,7 +46,7 @@ class CashoutRejectAtDispatchTest {
         boolean released, settled;
         LedgerReservationRef releasedRef;
         public LedgerReservationRef reserve(LedgerAccountRef account, Money amount) { return reservation; }
-        public void settle(LedgerReservationRef r) { settled = true; }
+        public LedgerSettleRef settle(LedgerReservationRef r) { settled = true; return new LedgerSettleRef(UUID.randomUUID()); }
         public void release(LedgerReservationRef r) { released = true; releasedRef = r; }
     }
 

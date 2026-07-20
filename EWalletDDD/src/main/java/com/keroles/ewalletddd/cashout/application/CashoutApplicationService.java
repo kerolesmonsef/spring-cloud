@@ -5,10 +5,7 @@ import com.keroles.ewalletddd.cashout.domain.port.LedgerAccountPort;
 import com.keroles.ewalletddd.cashout.domain.port.CashoutRailRegistry;
 import com.keroles.ewalletddd.cashout.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.cashout.domain.repository.CashoutRepository;
-import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
-import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
+import com.keroles.ewalletddd.cashout.domain.valueObject.*;
 import com.keroles.ewalletddd.shared.domain.Money;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -18,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CashoutApplicationService {
 
     private final CashoutRepository cashouts;
-    private final LedgerAccountPort ledger;   // ACL to the Accounting front door
+    private final LedgerAccountPort ledger;   
     private final CashoutRailRegistry rails;
-    private final ApplicationEventPublisher eventPublisher; // ponytail: in-process; Outbox in step 5
+    private final ApplicationEventPublisher eventPublisher; 
 
     public CashoutApplicationService(CashoutRepository cashouts,
                                      LedgerAccountPort ledger,
@@ -34,21 +31,20 @@ public class CashoutApplicationService {
 
     @Transactional
     public CashoutId requestCashout(LedgerAccountRef account, Money amount, Rail rail) {
-        LedgerReservationRef reservation = ledger.reserve(account, amount); // hold on the Ledger
+        LedgerReservationRef reservation = ledger.reserve(account, amount); 
         CashoutRequest cashout = CashoutRequest.request(account, amount, rail, reservation);
-        // ponytail: dispatch runs inside the reserve tx because the fake rail is in-process.
-        // Real rails dispatch AFTER commit via the Outbox (step 5) — don't hold a tx open across an external call.
+        
+        
         RailDispatchResult result = rails.forRail(rail).dispatch(cashout.id(), amount);
         switch (result.outcome()) {
-            case PENDING -> cashout.markDispatched(result.railReference()); // async rail: await confirm/fail callback
-            case CONFIRMED -> {                                             // sync rail: settled at dispatch, no callback
+            case PENDING -> cashout.markDispatched(result.railReference()); 
+            case CONFIRMED -> {                                             
                 cashout.markDispatched(result.railReference());
-                cashout.confirm();
-                ledger.settle(reservation);
+                cashout.confirm(ledger.settle(reservation));
             }
             case REJECTED -> {
                 cashout.fail();
-                ledger.release(reservation); // rail refused up front — give the hold back
+                ledger.release(reservation); 
             }
         }
         cashouts.save(cashout);
@@ -56,22 +52,21 @@ public class CashoutApplicationService {
         return cashout.id();
     }
 
-    // simulates the RailConfirmed callback (becomes an event handler in step 4)
+    
     @Transactional
     public void confirm(CashoutId id) {
         CashoutRequest cashout = load(id);
-        cashout.confirm();
-        ledger.settle(cashout.reservationRef()); // hold -> 0
+        cashout.confirm(ledger.settle(cashout.reservationRef())); 
         cashouts.save(cashout);
         publishEvents(cashout);
     }
 
-    // simulates the RailFailed callback (becomes an event handler in step 4)
+    
     @Transactional
     public void fail(CashoutId id) {
         CashoutRequest cashout = load(id);
         cashout.fail();
-        ledger.release(cashout.reservationRef()); // hold -> main
+        ledger.release(cashout.reservationRef()); 
         cashouts.save(cashout);
         publishEvents(cashout);
     }

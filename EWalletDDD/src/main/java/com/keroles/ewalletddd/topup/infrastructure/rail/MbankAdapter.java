@@ -11,12 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * Mbank — SYNCHRONOUS topup rail: dispatch settles the topup and returns the final result,
- * no webhook/callback. ponytail: fake — logs and returns CONFIRMED. Wire the real sync client
- * when the saga lands.
- */
-@Component("topupMbankAdapter") // cashout also has an MbankAdapter — disambiguate the bean name (routing is by rail(), not name)
+
+@Component("topupMbankAdapter") 
 public class MbankAdapter implements TopupRailPort {
 
     private static final Logger log = LoggerFactory.getLogger(MbankAdapter.class);
@@ -29,6 +25,6 @@ public class MbankAdapter implements TopupRailPort {
         String railReference = "MBANK-" + UUID.randomUUID();
         log.info("Mbank dispatch topup={} amount={} {} -> CONFIRMED {}",
                 id.value(), amount.amount(), amount.currency().code(), railReference);
-        return RailDispatchResult.confirmed(railReference); // sync: final outcome now, no callback
+        return RailDispatchResult.confirmed(railReference); 
     }
 }

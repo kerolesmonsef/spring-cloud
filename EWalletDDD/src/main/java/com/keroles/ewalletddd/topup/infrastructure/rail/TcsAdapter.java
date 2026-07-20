@@ -11,11 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * Tcs — ASYNCHRONOUS topup rail: dispatch accepts the request and returns PENDING; the real
- * funding outcome arrives later via a callback (simulated by confirm/fail). ponytail: fake —
- * logs and returns PENDING. Wire the real Tcs client + webhook when the saga lands.
- */
+
 @Component
 public class TcsAdapter implements TopupRailPort {
 
@@ -29,6 +25,6 @@ public class TcsAdapter implements TopupRailPort {
         String railReference = "TCS-" + UUID.randomUUID();
         log.info("Tcs dispatch topup={} amount={} {} -> PENDING {}",
                 id.value(), amount.amount(), amount.currency().code(), railReference);
-        return RailDispatchResult.pending(railReference); // async: final outcome arrives via callback
+        return RailDispatchResult.pending(railReference); 
     }
 }

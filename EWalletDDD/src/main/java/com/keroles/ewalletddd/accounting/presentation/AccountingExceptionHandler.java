@@ -6,7 +6,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-// scoped to this context's controllers so Cashout's advice owns Cashout errors (no cross-context bleed)
+
 @RestControllerAdvice(basePackageClasses = AccountController.class)
 public class AccountingExceptionHandler {
 

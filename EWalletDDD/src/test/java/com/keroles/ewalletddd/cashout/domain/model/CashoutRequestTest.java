@@ -3,6 +3,7 @@ package com.keroles.ewalletddd.cashout.domain.model;
 import com.keroles.ewalletddd.cashout.domain.exception.IllegalCashoutStateException;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
 import com.keroles.ewalletddd.shared.domain.Money;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ class CashoutRequestTest {
 
     private final LedgerAccountRef account = new LedgerAccountRef(1L);
     private final LedgerReservationRef reservation = new LedgerReservationRef(UUID.randomUUID());
+    private final LedgerSettleRef settleRef = new LedgerSettleRef(UUID.randomUUID());
     private final Money amount = Money.of("50.00", "AED");
 
     private CashoutRequest reserved() {
@@ -31,14 +33,15 @@ class CashoutRequestTest {
         assertEquals(CashoutRequest.Status.DISPATCHED, c.status());
         assertEquals("AANI-1", c.railReference());
 
-        c.confirm();
+        c.confirm(settleRef);
         assertEquals(CashoutRequest.Status.CONFIRMED, c.status());
+        assertEquals(settleRef, c.settleReference());
     }
 
     @Test
     void dispatchRejected_failFromReserved() {
         CashoutRequest c = reserved();
-        c.fail(); // rail refused at dispatch
+        c.fail(); 
         assertEquals(CashoutRequest.Status.FAILED, c.status());
     }
 
@@ -46,13 +49,13 @@ class CashoutRequestTest {
     void doubleConfirmIsRejected() {
         CashoutRequest c = reserved();
         c.markDispatched("AANI-1");
-        c.confirm();
-        assertThrows(IllegalCashoutStateException.class, c::confirm);
+        c.confirm(settleRef);
+        assertThrows(IllegalCashoutStateException.class, () -> c.confirm(settleRef));
     }
 
     @Test
     void confirmBeforeDispatchIsRejected() {
-        assertThrows(IllegalCashoutStateException.class, () -> reserved().confirm());
+        assertThrows(IllegalCashoutStateException.class, () -> reserved().confirm(settleRef));
     }
 
     @Test

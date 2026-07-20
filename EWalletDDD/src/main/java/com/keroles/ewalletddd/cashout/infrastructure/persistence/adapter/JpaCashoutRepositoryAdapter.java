@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-/** Option B save: load-then-copy onto the managed entity. CashoutId is domain-generated, so no id hand-back needed. */
+
 @Component
 public class JpaCashoutRepositoryAdapter implements CashoutRepository {
 

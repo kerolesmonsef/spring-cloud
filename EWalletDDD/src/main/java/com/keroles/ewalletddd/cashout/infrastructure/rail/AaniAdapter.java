@@ -11,10 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * Aani — UAE NPSS. Real integration = ISO 20022 message, sync-ish, irreversible once accepted.
- * ponytail: fake — logs and returns PENDING. Wire the real NPSS client + normalize-to-async webhook in step 4.
- */
+
 @Component
 public class AaniAdapter implements CashoutRailPort {
 

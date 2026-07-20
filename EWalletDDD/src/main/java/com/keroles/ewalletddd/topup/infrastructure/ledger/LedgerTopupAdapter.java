@@ -6,19 +6,15 @@ import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.topup.domain.port.LedgerTopupPort;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
 import com.keroles.ewalletddd.shared.domain.Money;
 import org.springframework.stereotype.Component;
 
-/**
- * The Anti-Corruption Layer between Topup and Accounting.
- * The ONLY class in the topup context allowed to import accounting.* — it translates Topup's refs
- * to/from the Ledger front door's identifiers. It calls the one-shot ledger.topup (system -> user):
- * Topup holds nothing, so there is no reserve/settle/release to translate.
- */
+
 @Component
 public class LedgerTopupAdapter implements LedgerTopupPort {
 
-    private final TransactionApplicationService ledger; // accounting.application — the movement front door
+    private final TransactionApplicationService ledger; 
 
     public LedgerTopupAdapter(TransactionApplicationService ledger) {
         this.ledger = ledger;

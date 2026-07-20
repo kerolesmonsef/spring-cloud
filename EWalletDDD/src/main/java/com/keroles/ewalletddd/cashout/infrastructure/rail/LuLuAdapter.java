@@ -11,10 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * LuLu — async correspondent rail, outcome arrives by webhook.
- * ponytail: fake — logs and returns PENDING. Wire the real client + webhook in step 4.
- */
+
 @Component
 public class LuLuAdapter implements CashoutRailPort {
 

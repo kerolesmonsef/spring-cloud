@@ -26,7 +26,7 @@ public final class TopupRequestMapper {
                 row.getCreatedAt());
     }
 
-    // copies onto a MANAGED entity so dirty-checking issues an UPDATE and @Version increments (Option B)
+    
     public static void copyOnto(TopupRequest t, TopupRequestJpaEntity row) {
         row.setId(t.id().value());
         row.setAccountRef(t.account().value());

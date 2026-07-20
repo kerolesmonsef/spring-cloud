@@ -19,7 +19,7 @@ import com.keroles.ewalletddd.shared.domain.Currency;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// drives Cashout through the REAL Accounting front door (via the ACL) + fake rails, over H2
+
 @SpringBootTest
 @RequiredArgsConstructor
 class CashoutApplicationServiceIT {
@@ -31,7 +31,7 @@ class CashoutApplicationServiceIT {
     private final Currency AED = Currency.of("AED");
 
     private LedgerAccountRef fundedAccount(String amount) {
-        AccountId id = accountService.openAccount(null, AED); // null -> registers a new user too
+        AccountId id = accountService.openAccount(null, AED); 
         transactionService.topup(id, Money.of(amount, "AED"));
         return new LedgerAccountRef(id.value());
     }
@@ -47,15 +47,15 @@ class CashoutApplicationServiceIT {
         CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.AANI);
 
         Account held = ledger(acc);
-        assertEquals(Money.of("60.00", "AED"), held.balance());      // main reduced by the hold
-        assertEquals(Money.of("40.00", "AED"), held.holdBalance());  // held
+        assertEquals(Money.of("60.00", "AED"), held.balance());      
+        assertEquals(Money.of("40.00", "AED"), held.holdBalance());  
         assertEquals(CashoutRequest.Status.DISPATCHED, cashoutService.get(id).status());
 
         cashoutService.confirm(id);
 
         Account settled = ledger(acc);
         assertEquals(Money.of("60.00", "AED"), settled.balance());
-        assertEquals(Money.zero(AED), settled.holdBalance());        // hold cleared
+        assertEquals(Money.zero(AED), settled.holdBalance());        
         assertEquals(CashoutRequest.Status.CONFIRMED, cashoutService.get(id).status());
     }
 
@@ -67,7 +67,7 @@ class CashoutApplicationServiceIT {
         cashoutService.fail(id);
 
         Account released = ledger(acc);
-        assertEquals(Money.of("100.00", "AED"), released.balance()); // back to main
+        assertEquals(Money.of("100.00", "AED"), released.balance()); 
         assertEquals(Money.zero(AED), released.holdBalance());
         assertEquals(CashoutRequest.Status.FAILED, cashoutService.get(id).status());
     }
@@ -75,11 +75,11 @@ class CashoutApplicationServiceIT {
     @Test
     void doubleConfirmIsRejected_holdSettledOnce() {
         LedgerAccountRef acc = fundedAccount("100.00");
-        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.LULU); // async rail
+        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.LULU); 
         cashoutService.confirm(id);
 
         assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
-        assertEquals(Money.zero(AED), ledger(acc).holdBalance());    // settled once, not twice
+        assertEquals(Money.zero(AED), ledger(acc).holdBalance());    
     }
 
     @Test
@@ -88,13 +88,13 @@ class CashoutApplicationServiceIT {
 
         CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.MBANK);
 
-        // Mbank is synchronous — settled inside requestCashout, no confirm() call
+        
         Account after = ledger(acc);
         assertEquals(Money.of("60.00", "AED"), after.balance());
-        assertEquals(Money.zero(AED), after.holdBalance());          // hold already cleared
+        assertEquals(Money.zero(AED), after.holdBalance());          
         assertEquals(CashoutRequest.Status.CONFIRMED, cashoutService.get(id).status());
 
-        // a late callback on an already-final cashout is rejected
+        
         assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
     }
 

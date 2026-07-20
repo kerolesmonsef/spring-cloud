@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// ponytail: plain lookup table, not a DDD aggregate. Accounting-owned (a_ prefix per repo law). code is the join key back to a_accounts.currency char(3).
+
 @Entity
 @Table(name = "a_currencies")
 @Getter
@@ -23,7 +23,7 @@ public class CurrencyJpaEntity {
     private Long id;
 
     @Column(nullable = false, unique = true, length = 3)
-    private String code; // ISO 4217, e.g. AED
+    private String code; 
 
     public CurrencyJpaEntity(String code) {
         this.code = code;

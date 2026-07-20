@@ -15,10 +15,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-// Money system -> user. Unlike Cashout, Topup places NO hold: the money isn't the user's until
-// the rail delivers it, so the Ledger is touched only on success (Mbank at dispatch, Tcs at
-// callback). Guard runs before the Ledger: complete() can throw BEFORE ledger.topup() moves money,
-// and the resulting Ledger id is attached afterward via recordLedgerRef() (a no-state-change setter).
+
+
+
+
+
+
 public class TopupRequest {
 
     public enum Status { PENDING, COMPLETED, FAILED }
@@ -29,8 +31,8 @@ public class TopupRequest {
     private final Rail rail;
     private final Instant createdAt;
     private Status status;
-    private String railReference;                     // null until dispatched
-    private LedgerTransactionRef ledgerTransactionRef; // null until completed
+    private String railReference;                     
+    private LedgerTransactionRef ledgerTransactionRef; 
     private final List<Object> events = new ArrayList<>();
 
     private TopupRequest(TopupId id, LedgerAccountRef account, Money amount, Rail rail, Status status,
@@ -57,29 +59,23 @@ public class TopupRequest {
         return new TopupRequest(id, account, amount, rail, status, railReference, ledgerTransactionRef, createdAt);
     }
 
-    // rail accepted the request; store its reference so an async (Tcs) callback can correlate back.
-    // Stays PENDING — dispatch is not a settlement.
+    
+    
     public void recordDispatch(String railReference) {
         requireStatus(Status.PENDING);
         this.railReference = railReference;
         events.add(new TopupDispatchedEvent(id, rail, railReference));
     }
 
-    // GUARD FIRST: throws on a duplicate callback BEFORE any money moves. Takes no Ledger ref —
-    // it doesn't exist yet at guard time (recordLedgerRef attaches it once ledger.topup() runs).
-    public void complete() {
+    public void complete(LedgerTransactionRef ledgerTransactionRef) {
         requireStatus(Status.PENDING);
+        this.ledgerTransactionRef = ledgerTransactionRef;
         status = Status.COMPLETED;
-        events.add(new TopupCompletedEvent(id));
-    }
-
-    // pure audit link, no state change / no event — set right after ledger.topup() returns
-    public void recordLedgerRef(LedgerTransactionRef ref) {
-        this.ledgerTransactionRef = ref;
+        events.add(new TopupCompletedEvent(id, ledgerTransactionRef));
     }
 
     public void fail(String reason) {
-        requireStatus(Status.PENDING); // nothing to undo — the user was never credited
+        requireStatus(Status.PENDING); 
         status = Status.FAILED;
         events.add(new TopupFailedEvent(id, reason));
     }

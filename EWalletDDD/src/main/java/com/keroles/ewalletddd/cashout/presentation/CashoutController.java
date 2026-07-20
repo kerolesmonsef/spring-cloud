@@ -44,7 +44,7 @@ public class CashoutController {
         return CashoutResponse.from(cashoutService.get(new CashoutId(UUID.fromString(id))));
     }
 
-    // simulate the async rail outcome (temporary — becomes webhook-driven in step 4)
+    
     @PostMapping("/{id}/confirm")
     public CashoutResponse confirm(@PathVariable String id) {
         CashoutId cashoutId = new CashoutId(UUID.fromString(id));

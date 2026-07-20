@@ -17,9 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class TopupApplicationService {
 
     private final TopupRepository topups;
-    private final LedgerTopupPort ledger;   // ACL to the Accounting front door
+    private final LedgerTopupPort ledger;   
     private final TopupRailRegistry rails;
-    private final ApplicationEventPublisher eventPublisher; // ponytail: in-process; Outbox in step 5
+    private final ApplicationEventPublisher eventPublisher; 
 
     public TopupApplicationService(TopupRepository topups,
                                    LedgerTopupPort ledger,
@@ -31,42 +31,40 @@ public class TopupApplicationService {
         this.eventPublisher = eventPublisher;
     }
 
-    // money system -> user. No hold: the Ledger is credited only on success, never up front.
+    
     @Transactional
     public TopupId requestTopup(LedgerAccountRef account, Money amount, Rail rail) {
-        TopupRequest topup = TopupRequest.request(account, amount, rail); // PENDING — Ledger untouched
-        // ponytail: dispatch runs inside the request tx because the fake rail is in-process.
-        // Real rails dispatch AFTER commit via the Outbox (step 5) — don't hold a tx open across an external call.
+        TopupRequest topup = TopupRequest.request(account, amount, rail); 
+        
+        
         RailDispatchResult result = rails.forRail(rail).dispatch(topup.id(), amount);
         switch (result.outcome()) {
-            case PENDING -> topup.recordDispatch(result.railReference()); // async (Tcs): await confirm/fail callback
-            case CONFIRMED -> {                                           // sync (Mbank): credit now, no callback
+            case PENDING -> topup.recordDispatch(result.railReference()); 
+            case CONFIRMED -> {                                           
                 topup.recordDispatch(result.railReference());
-                topup.complete();                                        // guard FIRST — before money moves
-                topup.recordLedgerRef(ledger.topup(account, amount));    // ...then credit + attach the link
+                topup.complete(ledger.topup(account, amount));
             }
-            case REJECTED -> topup.fail(result.reason());                // rail refused up front — Ledger never touched
+            case REJECTED -> topup.fail(result.reason());                
         }
         topups.save(topup);
         publishEvents(topup);
         return topup.id();
     }
 
-    // simulates the RailConfirmed callback (becomes an event handler when the saga lands)
+    
     @Transactional
     public void confirm(TopupId id) {
         TopupRequest topup = load(id);
-        topup.complete();                                                // guard FIRST — throws before money moves
-        topup.recordLedgerRef(ledger.topup(topup.account(), topup.amount())); // credit now
+        topup.complete(ledger.topup(topup.account(), topup.amount()));
         topups.save(topup);
         publishEvents(topup);
     }
 
-    // simulates the RailFailed callback (becomes an event handler when the saga lands)
+    
     @Transactional
     public void fail(TopupId id) {
         TopupRequest topup = load(id);
-        topup.fail("rail reported failure"); // nothing to undo — the user was never credited
+        topup.fail("rail reported failure"); 
         topups.save(topup);
         publishEvents(topup);
     }

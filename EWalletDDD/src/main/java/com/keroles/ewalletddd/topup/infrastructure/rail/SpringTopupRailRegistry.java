@@ -10,10 +10,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Self-assembles the rail routing map from every TopupRailPort bean.
- * Adding a rail = one new adapter @Component + one Rail enum value; nothing here changes.
- */
+
 @Component
 public class SpringTopupRailRegistry implements TopupRailRegistry {
 

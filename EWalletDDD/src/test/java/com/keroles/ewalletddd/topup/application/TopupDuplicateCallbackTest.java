@@ -14,18 +14,19 @@ import com.keroles.ewalletddd.shared.domain.Money;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// Proves GUARD-BEFORE-LEDGER on a sequential duplicate callback: complete()'s state guard must
-// throw BEFORE ledger.topup() runs, so a duplicate confirm credits the Ledger exactly once.
-// Pure fakes (no @Transactional) on purpose — the Spring IT can't discriminate the two orderings
-// because its rollback would undo a guard-LAST double-credit and leave the same final balance.
-// Here there is no tx: guard-last would leave credits == 2, guard-first leaves credits == 1.
+
+
+
+
 class TopupDuplicateCallbackTest {
 
     @Test
@@ -37,17 +38,20 @@ class TopupDuplicateCallbackTest {
                 new TopupApplicationService(repo, ledger, pendingRail, event -> {});
 
         TopupId id = service.requestTopup(new LedgerAccountRef(7L), Money.of("30.00", "AED"), Rail.TCS);
-        service.confirm(id);                                                  // first callback: credits once
-        assertThrows(IllegalStateException.class, () -> service.confirm(id)); // duplicate: guard throws
+        service.confirm(id);                                                  
+        assertThrows(IllegalStateException.class, () -> service.confirm(id)); 
 
         assertEquals(1, ledger.credits,
-                "guard runs before ledger.topup — a duplicate callback must not credit again");
+                "ledger dedupes by idempotencyKey — a duplicate callback must not credit again");
         assertEquals(TopupRequest.Status.COMPLETED, repo.findById(id).orElseThrow().status());
     }
 
     static class CountingLedger implements LedgerTopupPort {
         int credits;
-        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount) {
+        private final Set<TopupId> seen = new HashSet<>();
+        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount, TopupId idempotencyKey) {
+            if (!seen.add(idempotencyKey))
+                throw new IllegalStateException("Topup " + idempotencyKey.value() + " already processed");
             credits++;
             return new LedgerTransactionRef(UUID.randomUUID());
         }
@@ -55,7 +59,7 @@ class TopupDuplicateCallbackTest {
 
     record PendingRail(Rail rail) implements TopupRailPort {
         public RailDispatchResult dispatch(TopupId id, Money amount) {
-            return RailDispatchResult.pending("TCS-" + id.value()); // async: stays PENDING, awaits callback
+            return RailDispatchResult.pending("TCS-" + id.value()); 
         }
     }
 

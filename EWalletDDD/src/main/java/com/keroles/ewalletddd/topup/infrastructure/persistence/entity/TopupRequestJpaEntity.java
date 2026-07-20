@@ -23,7 +23,7 @@ import java.util.UUID;
 public class TopupRequestJpaEntity {
 
     @Id
-    @JdbcTypeCode(SqlTypes.CHAR)   // char(36) instead of binary(16) — readable in SQL
+    @JdbcTypeCode(SqlTypes.CHAR)   
     private UUID id;
 
     @Column(nullable = false)
@@ -42,11 +42,11 @@ public class TopupRequestJpaEntity {
     private String status;
 
     @Column(length = 100)
-    private String railReference; // null until dispatched
+    private String railReference; 
 
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(length = 36)
-    private UUID ledgerTransactionRef; // null until completed
+    private UUID ledgerTransactionRef; 
 
     @Column(nullable = false)
     private Instant createdAt;

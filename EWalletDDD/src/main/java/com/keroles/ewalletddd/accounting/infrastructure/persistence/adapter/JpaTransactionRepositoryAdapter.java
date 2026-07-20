@@ -18,8 +18,8 @@ public class JpaTransactionRepositoryAdapter implements TransactionRepository {
         this.jpa = jpa;
     }
 
-    // readOnly tx: entries/transfers are LAZY, so the mapping (which reads both collections) needs
-    // an open session even when the caller itself isn't inside a transaction.
+    
+    
     @Override
     @Transactional(readOnly = true)
     public Optional<Transaction> findById(TransactionId id) {

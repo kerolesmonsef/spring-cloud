@@ -26,7 +26,7 @@ public final class CashoutRequestMapper {
                 row.getCreatedAt());
     }
 
-    // copies onto a MANAGED entity so dirty-checking issues an UPDATE and @Version increments (Option B)
+    
     public static void copyOnto(CashoutRequest c, CashoutRequestJpaEntity row) {
         row.setId(c.id().value());
         row.setAccountRef(c.account().value());
@@ -36,6 +36,7 @@ public final class CashoutRequestMapper {
         row.setStatus(c.status().name());
         row.setLedgerReservationRef(c.reservationRef().value());
         row.setRailReference(c.railReference());
+        row.setLedgerSettleRef(c.settleReference() != null ? c.settleReference().value() : null);
         row.setCreatedAt(c.createdAt());
     }
 }

@@ -16,16 +16,16 @@ public class Transaction {
     public enum Stage { HOLD, SETTLE, RELEASE }
 
     public record Entry(AccountId accountId, Direction direction, Money amount, Money balanceAfter) {
-        public enum Direction { DEBIT, CREDIT } // DEBIT = money out of account, CREDIT = money in
+        public enum Direction { DEBIT, CREDIT } 
     }
 
     public record Transfer(AccountId senderId, AccountId receiverId, Money amount) {}
 
     private final TransactionId id;
     private final Type type;
-    private final Party sender;    // business party money moved FROM (may be EXTERNAL — not a held account)
-    private final Party receiver;  // business party money moved TO   (may be EXTERNAL)
-    private final Money amount;    // the transaction's principal — source of truth, NOT derived from entries
+    private final Party sender;    
+    private final Party receiver;  
+    private final Money amount;    
     private final Stage stage;
     private final TransactionId parentCorrelationId;
     private final Instant createdAt;
@@ -51,8 +51,7 @@ public class Transaction {
         return start(type, sender, receiver, amount, null, null);
     }
 
-    // parentCorrelationId null -> self-correlated (this row starts a new order, e.g. a HOLD).
-    // Pass the HOLD's id here when starting its SETTLE/RELEASE child, so both share one correlation id.
+
     public static Transaction start(Type type, Party sender, Party receiver, Money amount, Stage stage,
                                     TransactionId parentCorrelationId) {
         TransactionId id = TransactionId.newId();
@@ -90,14 +89,14 @@ public class Transaction {
         status = target;
     }
 
-    // money in from outside: EXTERNAL funding source -> our account
+    
     public static Transaction deposit(AccountId acc, Party self, Money amount, Money balanceAfter) {
         Transaction tx = start(Type.DEPOSIT, Party.EXTERNAL, self, amount);
         tx.addEntry(acc, Entry.Direction.CREDIT, amount, balanceAfter);
         tx.complete();
         return tx;
     }
-    // money out to outside: our account -> EXTERNAL destination
+    
     public static Transaction withdrawal(AccountId acc, Party self, Money amount, Money balanceAfter) {
         Transaction tx = start(Type.WITHDRAWAL, self, Party.EXTERNAL, amount);
         tx.addEntry(acc, Entry.Direction.DEBIT, amount, balanceAfter);

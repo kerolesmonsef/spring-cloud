@@ -6,7 +6,7 @@ import java.time.Instant;
 
 public class User {
 
-    private UserId id; // null until first save — DB auto-increment
+    private UserId id; 
     private final Instant createdAt;
 
     private User(UserId id, Instant createdAt) {
