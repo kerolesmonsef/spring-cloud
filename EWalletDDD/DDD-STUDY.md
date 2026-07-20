@@ -22,7 +22,7 @@
 - Repository save = **Option B**: adapter loads managed JPA entity, copies state onto it → dirty checking UPDATEs, `@Version` optimistic lock works, domain stays version-free.
 - Idempotency = guarded state transitions on the aggregate (duplicate settle throws), not ifs in controllers.
 - **Tables belong to ONE context, full stop.** Other contexts never SELECT them, never see the JPA entities — only the owning context's application service (or its events). Schema is an implementation detail behind the front door; that's what makes the future microservice split cheap (database-per-service is already true logically).
-- **Table prefix = ownership**: Accounting tables are `a_*` (a_users, a_accounts, a_transactions, a_transaction_entries). Cashout will be `c_*`, Onboarding `o_*`. Prefix makes context ownership visible in the schema itself.
+- **Table prefix = ownership**: Accounting tables are `a_*` (a_users, a_accounts, a_transactions, a_transaction_entries). Cashout is `c_*`, Topup `t_*` (t_topup_requests), Onboarding `o_*`. Prefix makes context ownership visible in the schema itself.
 - **No shared users table**: Onboarding will get its OWN users table (o_users) with its own shape (steps, KYC, status). Same real-world person, two models, linked by UserId, synced by events. Duplication is deliberate decoupling.
 - Enforcement is discipline in a monolith — add an ArchUnit test when Cashout starts: no class outside `accounting..` depends on `accounting.domain..` or `accounting.infrastructure..`; only `accounting.application..` is reachable.
 
@@ -38,7 +38,7 @@
 
 ## Current status
 
-Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). 29 tests green.
+Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). 46 tests green.
 
 ```
 com.keroles.ewalletddd/
@@ -90,6 +90,24 @@ com.keroles.ewalletddd/
     presentation/                   CashoutController (POST /cashouts, GET, POST /{id}/confirm|/fail),
                                     requests/ (CreateCashoutRequest), responses/ (CashoutResponse),
                                     CashoutExceptionHandler (scoped)
+  topup/
+    domain/model/                   TopupRequest (aggregate + state machine PENDING→COMPLETED/FAILED,
+                                    verbs: recordDispatch/complete/recordLedgerRef/fail, restore)
+    domain/valueObject/             TopupId (UUID), Rail (enum TCS/MBANK),
+                                    LedgerAccountRef (Long), LedgerTransactionRef (UUID)
+    domain/event/                   TopupRequestedEvent, TopupDispatchedEvent, TopupCompletedEvent, TopupFailedEvent
+    domain/exception/               IllegalTopupStateException (→ 409)
+    domain/repository/              TopupRepository (port)
+    domain/port/                    LedgerTopupPort, TopupRailPort, TopupRailRegistry, RailDispatchResult
+    application/                    TopupApplicationService — THE front door:
+                                    requestTopup(account,money,rail)→TopupId, confirm(id), fail(id), get(id)
+    infrastructure/persistence/     entity/mapper/repository/adapter (Option B, t_topup_requests, @Version)
+    infrastructure/ledger/          LedgerTopupAdapter — the ACL, ONLY topup class importing accounting.*
+    infrastructure/rail/            TcsAdapter (async→PENDING), MbankAdapter (sync→CONFIRMED, bean "topupMbankAdapter"),
+                                    SpringTopupRailRegistry
+    presentation/                   TopupController (POST /topups, GET, POST /{id}/confirm|/fail),
+                                    requests/ (CreateTopupRequest), responses/ (TopupResponse),
+                                    TopupExceptionHandler (scoped)
 ```
 
 Notes:
@@ -124,5 +142,14 @@ Cashout step-3 specifics:
 - **Dispatch outcome is three-way** (`RailDispatchResult.Outcome`): PENDING (async — Aani/LuLu, awaits confirm/fail callback), CONFIRMED (sync — Mbank, settled at dispatch, no callback), REJECTED (refused up front → fail + release). Sync rails walk DISPATCHED→CONFIRMED inside `requestCashout`; the state machine is unchanged, they just don't wait.
 - **Reservation link**: `LedgerAccountPort.reserve` → `TransactionApplicationService.cashout` returns the ledger `TransactionId` → stored on CashoutRequest as `LedgerReservationRef`; confirm→`settle(ref)`, fail→`release(ref)`.
 - **Deferred**: real per-rail webhooks + RailConfirmed/RailFailed saga (step 4, replaces confirm/fail methods); compliance states PENDING_REVIEW/REJECTED (step 7); dispatch-after-commit via Outbox (step 5 — today dispatch runs inside the cashout/reserve tx because the fake rail is in-process).
+
+Topup context (2026-07-20) — spec `docs/superpowers/specs/2026-07-20-topup-context-design.md`:
+- **Money system → user, credit-on-confirm (no hold).** Deliberate contrast with Cashout, and the main lesson: Cashout holds the user's *own* funds so they can't double-spend while the rail works; Topup holds **nothing**, because the money isn't the user's until the external rail delivers it. So the Ledger is touched **only on success** — never reserved up front. Reuses the existing one-shot `TransactionApplicationService.topup` (system.withdraw + user.deposit, COMPLETED atomic); **zero Accounting changes**.
+- **State machine `PENDING → COMPLETED | FAILED`** (no RESERVED/DISPATCHED — nothing to reserve, and dispatch is same-tx as request for the in-process fake). Guard `complete() requires PENDING` = idempotency (duplicate callback throws).
+- **Guard-before-ledger** (advisor-flagged, matches the codebase's fail-fast rule): `complete()` takes no arg and can throw *before* `ledger.topup()` moves money; the resulting id is attached after via `recordLedgerRef()` (no-state-change setter). Payoff is the **sequential** duplicate callback: the guard throws before `ledger.topup` runs, so no wasted ledger tx + rollback. Proven by `TopupDuplicateCallbackTest` (pure fakes, asserts `ledger.topup` invoked exactly once) — the IT `doubleConfirmIsRejected_creditedOnce` can't prove it (its `@Transactional` rollback would undo a guard-last double-credit and leave the same balance either way; it only shows the duplicate is rejected + credited once end-to-end). The **concurrent** double-callback is a different guard: both callers pass the in-memory check and `@Version` optimistic lock rolls one back.
+- **Rails**: `Mbank` sync (dispatch→CONFIRMED, credit now, no callback), `Tcs` async (dispatch→PENDING, credit at confirm callback). Own `Rail`/`RailDispatchResult`/`LedgerAccountRef` copies (per-context isolation law). `SpringTopupRailRegistry` self-assembles by `rail()`.
+- **Bean-name gotcha**: both cashout and topup have a class `MbankAdapter` → same default bean name `mbankAdapter` → `ConflictingBeanDefinitionException`. Fixed by `@Component("topupMbankAdapter")` on topup's; routing is by `rail()` so the bean name is functionally irrelevant.
+- **ACL**: `topup.infrastructure.ledger.LedgerTopupAdapter` is the ONLY topup class importing `accounting.*` (depends on `TransactionApplicationService` + the id VOs). Same future-ArchUnit rule as Cashout's adapter.
+- Tests: `TopupRequestTest` (pure domain, state machine), `TopupApplicationServiceIT` (@SpringBootTest, real ledger + fake rails: Mbank credits at dispatch, Tcs pending→confirm credits, Tcs fail leaves balance untouched, double-confirm credited once), `TopupRejectAtDispatchTest` (pure fakes, REJECTED branch the real fakes can't reach).
 
 Next session: step 4 — rail webhooks + normalize-to-async saga spine.

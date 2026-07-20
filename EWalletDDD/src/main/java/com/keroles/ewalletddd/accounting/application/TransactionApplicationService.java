@@ -63,18 +63,18 @@ public class TransactionApplicationService {
     // user -> user, two-phase. Holds the funds on `from`; `to` is untouched until settle().
     @Transactional
     public TransactionId transfer(AccountId fromId, AccountId toId, Money amount) {
-        Account from = loadAccount(fromId);
-        Account to = loadAccount(toId); // receiver — also fails fast if it doesn't exist
-        from.hold(amount);
+        Account fromAccount = loadAccount(fromId);
+        Account toAccount = loadAccount(toId); // receiver — also fails fast if it doesn't exist
+        fromAccount.hold(amount);
 
-        Transaction hold = Transaction.start(Transaction.Type.TRANSFER, partyOf(from), partyOf(to), amount,
+        Transaction holdTransaction = Transaction.start(Transaction.Type.TRANSFER, partyOf(fromAccount), partyOf(toAccount), amount,
                 Transaction.Stage.HOLD, null);
-        hold.addEntry(from.id(), Transaction.Entry.Direction.DEBIT, amount, from.balance());
+        holdTransaction.addEntry(fromAccount.id(), Transaction.Entry.Direction.DEBIT, amount, fromAccount.balance());
 
-        accountRepository.save(from);
-        transactionRepository.save(hold);
-        publishEvents(from);
-        return hold.id();
+        accountRepository.save(fromAccount);
+        transactionRepository.save(holdTransaction);
+        publishEvents(fromAccount);
+        return holdTransaction.id();
     }
 
     // user -> system, two-phase. Holds the funds; the money reaches system only on settle (success).
@@ -96,23 +96,23 @@ public class TransactionApplicationService {
 
     @Transactional
     public TransactionId settle(TransactionId txId) {
-        Transaction hold = loadTransaction(txId);
-        if (hold.stage() != Transaction.Stage.HOLD)
-            throw new IllegalArgumentException("Cannot settle a " + hold.type() + " transaction with no pending hold");
-        hold.complete(); // throws if already resolved — fail fast before touching accounts
+        Transaction holdTransaction = loadTransaction(txId);
+        if (holdTransaction.stage() != Transaction.Stage.HOLD)
+            throw new IllegalArgumentException("Cannot settle a " + holdTransaction.type() + " transaction with no pending hold");
+        holdTransaction.complete(); // throws if already resolved — fail fast before touching accounts
 
-        Account sender = resolveParty(hold.sender());
-        Account receiver = resolveParty(hold.receiver());
-        settleByType(hold.type(), sender, receiver, hold.amount());
+        Account sender = resolveParty(holdTransaction.sender());
+        Account receiver = resolveParty(holdTransaction.receiver());
+        settleByType(holdTransaction.type(), sender, receiver, holdTransaction.amount());
 
-        Transaction settlement = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
-                Transaction.Stage.SETTLE, hold.id());
-        settlement.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, hold.amount(), receiver.balance());
-        settlement.complete();
-        settlement.addTransfer(sender.id(), receiver.id(), hold.amount());
+        Transaction settlementTransaction = Transaction.start(holdTransaction.type(), holdTransaction.sender(), holdTransaction.receiver(), holdTransaction.amount(),
+                Transaction.Stage.SETTLE, holdTransaction.id());
+        settlementTransaction.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, holdTransaction.amount(), receiver.balance());
+        settlementTransaction.complete();
+        settlementTransaction.addTransfer(sender.id(), receiver.id(), holdTransaction.amount());
 
-        saveAll(sender, receiver, hold, settlement);
-        return settlement.id();
+        saveAll(sender, receiver, holdTransaction, settlementTransaction);
+        return settlementTransaction.id();
     }
 
 
