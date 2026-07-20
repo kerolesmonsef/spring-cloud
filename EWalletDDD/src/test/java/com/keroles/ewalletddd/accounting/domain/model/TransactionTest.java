@@ -45,4 +45,28 @@ class TransactionTest {
         assertEquals(hold.parentCorrelationId(), settlement.parentCorrelationId());
         assertNotEquals(hold.id(), settlement.id());
     }
+
+    @Test
+    void addTransferRejectedUnlessCompleted() {
+        Transaction hold = Transaction.start(Transaction.Type.TRANSFER, self, self, amount, Transaction.Stage.HOLD, null);
+        assertThrows(IllegalStateException.class,
+                () -> hold.addTransfer(new AccountId(1L), new AccountId(2L), amount));
+
+        hold.fail();
+        assertThrows(IllegalStateException.class,
+                () -> hold.addTransfer(new AccountId(1L), new AccountId(2L), amount));
+    }
+
+    @Test
+    void addTransferRecordsSenderReceiverAmountWhenCompleted() {
+        Transaction tx = Transaction.start(Transaction.Type.TOPUP, self, self, amount);
+        tx.complete();
+        tx.addTransfer(new AccountId(1L), new AccountId(2L), amount);
+
+        assertEquals(1, tx.transfers().size());
+        Transaction.Transfer transfer = tx.transfers().get(0);
+        assertEquals(new AccountId(1L), transfer.senderId());
+        assertEquals(new AccountId(2L), transfer.receiverId());
+        assertEquals(amount, transfer.amount());
+    }
 }

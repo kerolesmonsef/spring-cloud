@@ -1,5 +1,7 @@
 package com.keroles.ewalletddd.accounting.infrastructure.persistence.mapper;
   import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.TransactionJpaEntity;
+import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.TransactionEntryJpaEntity;
+import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.TransferJpaEntity;
 
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
@@ -24,16 +26,25 @@ public final class TransactionMapper {
                 row.getParentCorrelationId() == null ? null : new TransactionId(row.getParentCorrelationId()),
                 Transaction.Status.valueOf(row.getStatus()),
                 row.getCreatedAt(),
-                row.getEntries().stream().map(TransactionMapper::entryToDomain).toList());
+                row.getEntries().stream().map(TransactionMapper::entryToDomain).toList(),
+                row.getTransfers().stream().map(TransactionMapper::transferToDomain).toList());
     }
 
-    private static Transaction.Entry entryToDomain(TransactionJpaEntity.TransactionEntryJpaEntity row) {
+    private static Transaction.Entry entryToDomain(TransactionEntryJpaEntity row) {
         Currency currency = Currency.of(row.getCurrency());
         return new Transaction.Entry(
                 new AccountId(row.getAccountId()),
                 Transaction.Entry.Direction.valueOf(row.getDirection()),
                 new Money(row.getAmount(), currency),
                 new Money(row.getBalanceAfter(), currency));
+    }
+
+    private static Transaction.Transfer transferToDomain(TransferJpaEntity row) {
+        Currency currency = Currency.of(row.getCurrency());
+        return new Transaction.Transfer(
+                new AccountId(row.getSenderId()),
+                new AccountId(row.getReceiverId()),
+                new Money(row.getAmount(), currency));
     }
 
     public static void copyOnto(Transaction tx, TransactionJpaEntity row) {
@@ -53,15 +64,28 @@ public final class TransactionMapper {
         for (int i = row.getEntries().size(); i < tx.entries().size(); i++) {
             row.getEntries().add(entryToRow(tx.entries().get(i)));
         }
+        // Transfers are append-only; only add the ones the row doesn't have yet.
+        for (int i = row.getTransfers().size(); i < tx.transfers().size(); i++) {
+            row.getTransfers().add(transferToRow(tx.transfers().get(i)));
+        }
     }
 
-    private static TransactionJpaEntity.TransactionEntryJpaEntity entryToRow(Transaction.Entry entry) {
-        var row = new TransactionJpaEntity.TransactionEntryJpaEntity();
+    private static TransactionEntryJpaEntity entryToRow(Transaction.Entry entry) {
+        var row = new TransactionEntryJpaEntity();
         row.setAccountId(entry.accountId().value());
         row.setDirection(entry.direction().name());
         row.setCurrency(entry.amount().currency().code());
         row.setAmount(entry.amount().amount());
         row.setBalanceAfter(entry.balanceAfter().amount());
+        return row;
+    }
+
+    private static TransferJpaEntity transferToRow(Transaction.Transfer transfer) {
+        var row = new TransferJpaEntity();
+        row.setSenderId(transfer.senderId().value());
+        row.setReceiverId(transfer.receiverId().value());
+        row.setCurrency(transfer.amount().currency().code());
+        row.setAmount(transfer.amount().amount());
         return row;
     }
 }

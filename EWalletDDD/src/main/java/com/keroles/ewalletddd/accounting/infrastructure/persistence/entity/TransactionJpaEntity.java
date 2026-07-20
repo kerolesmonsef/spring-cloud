@@ -3,8 +3,6 @@ package com.keroles.ewalletddd.accounting.infrastructure.persistence.entity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
@@ -77,30 +75,9 @@ public class TransactionJpaEntity {
     @OrderColumn(name = "position")
     private List<TransactionEntryJpaEntity> entries = new ArrayList<>();
 
-    @Entity
-    @Table(name = "a_transaction_entries")
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class TransactionEntryJpaEntity {
-
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-
-        @Column(nullable = false)
-        private Long accountId;
-
-        @Column(nullable = false, length = 10)
-        private String direction;
-
-        @Column(nullable = false, length = 3)
-        private String currency;
-
-        @Column(nullable = false, precision = 19, scale = 4)
-        private BigDecimal amount;
-
-        @Column(nullable = false, precision = 19, scale = 4)
-        private BigDecimal balanceAfter;
-    }
+    /** Transfers live and die with their transaction — one aggregate, one cascade. */
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "transaction_id", nullable = false)
+    @OrderColumn(name = "position")
+    private List<TransferJpaEntity> transfers = new ArrayList<>();
 }

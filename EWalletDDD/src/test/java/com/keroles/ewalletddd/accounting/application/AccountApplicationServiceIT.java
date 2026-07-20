@@ -1,7 +1,11 @@
 package com.keroles.ewalletddd.accounting.application;
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
+import com.keroles.ewalletddd.accounting.domain.model.Transaction;
+import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
+import com.keroles.ewalletddd.accounting.domain.repository.TransactionRepository;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
 import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.shared.domain.Money;
@@ -21,6 +25,8 @@ class AccountApplicationServiceIT {
 
     private final AccountApplicationService accountApplicationService;
     private final TransactionApplicationService transactionApplicationService;
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
 
     private final Currency AED = Currency.of("AED");
 
@@ -28,6 +34,12 @@ class AccountApplicationServiceIT {
         AccountId id = accountApplicationService.openAccount(null, AED); // null -> registers a new user too
         transactionApplicationService.topup(id, Money.of(amount, "AED"));
         return id;
+    }
+
+    // system account is a shared, never-reset seed row — assert the delta settle() adds, not an absolute value
+    private Money systemBalance() {
+        return accountRepository.findByTypeAndCurrency(AccountType.SYSTEM, AED)
+                .orElseThrow().balance();
     }
 
     @Test
@@ -50,6 +62,7 @@ class AccountApplicationServiceIT {
     @Test
     void reserveThenSettle_holdGoesToZero() {
         AccountId id = fundedAccount("100.00");
+        Money systemBefore = systemBalance();
         TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
 
         transactionApplicationService.settle(txId);
@@ -57,11 +70,15 @@ class AccountApplicationServiceIT {
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("60.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
+        assertEquals(systemBefore.add(Money.of("40.00", "AED")), systemBalance()); // settled cashout lands with system
+
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // hold row itself never gets one
     }
 
     @Test
     void reserveThenRelease_moneyBackToMain() {
         AccountId id = fundedAccount("100.00");
+        Money systemBefore = systemBalance();
         TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
 
         transactionApplicationService.release(txId);
@@ -69,6 +86,9 @@ class AccountApplicationServiceIT {
         Account account = accountApplicationService.getAccount(id);
         assertEquals(Money.of("100.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
+        assertEquals(systemBefore, systemBalance()); // released cashout never touches the receiver
+
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // release is not a success
     }
 
     @Test
@@ -93,11 +113,12 @@ class AccountApplicationServiceIT {
         AccountId from = fundedAccount("100.00");
         AccountId to = accountApplicationService.openAccount(null, AED);
 
-        transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
+        TransactionId txId = transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(to).balance());
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // still pending, no transfer row yet
     }
 
     @Test
@@ -106,11 +127,34 @@ class AccountApplicationServiceIT {
         AccountId to = accountApplicationService.openAccount(null, AED);
         TransactionId txId = transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
-        transactionApplicationService.settle(txId);
+        TransactionId settlementId = transactionApplicationService.settle(txId);
 
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
+
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); // hold row itself never gets one
+        var transfers = transactionRepository.findById(settlementId).orElseThrow().transfers();
+        assertEquals(1, transfers.size());
+        Transaction.Transfer transfer = transfers.get(0);
+        assertEquals(from, transfer.senderId());
+        assertEquals(to, transfer.receiverId());
+        assertEquals(Money.of("30.00", "AED"), transfer.amount());
+    }
+
+    @Test
+    void topupWritesATransferRowFromSystemToUser() {
+        AccountId id = accountApplicationService.openAccount(null, AED);
+        Money systemBefore = systemBalance();
+
+        TransactionId txId = transactionApplicationService.topup(id, Money.of("100.00", "AED"));
+
+        var transfers = transactionRepository.findById(txId).orElseThrow().transfers();
+        assertEquals(1, transfers.size());
+        Transaction.Transfer transfer = transfers.get(0);
+        assertEquals(id, transfer.receiverId());
+        assertEquals(Money.of("100.00", "AED"), transfer.amount());
+        assertEquals(systemBalance(), systemBefore.subtract(Money.of("100.00", "AED")));
     }
 
     @Test

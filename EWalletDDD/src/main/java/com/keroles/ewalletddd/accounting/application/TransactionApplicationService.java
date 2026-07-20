@@ -44,7 +44,7 @@ public class TransactionApplicationService {
     }
 
     @Transactional
-    public void topup(AccountId userAccountId, Money amount) {
+    public TransactionId topup(AccountId userAccountId, Money amount) {
         Account user = loadAccount(userAccountId);
         Account system = loadSystemAccount(user.currency());
         system.withdraw(amount);
@@ -54,8 +54,10 @@ public class TransactionApplicationService {
         tx.addEntry(system.id(), Transaction.Entry.Direction.DEBIT, amount, system.balance());
         tx.addEntry(user.id(), Transaction.Entry.Direction.CREDIT, amount, user.balance());
         tx.complete();
+        tx.addTransfer(system.id(), user.id(), amount);
 
         saveAll(system, user, tx);
+        return tx.id();
     }
 
     // user -> user, two-phase. Holds the funds on `from`; `to` is untouched until settle().
@@ -93,23 +95,35 @@ public class TransactionApplicationService {
     }
 
     @Transactional
-    public void settle(TransactionId txId) {
+    public TransactionId settle(TransactionId txId) {
         Transaction hold = loadTransaction(txId);
         if (hold.stage() != Transaction.Stage.HOLD)
             throw new IllegalArgumentException("Cannot settle a " + hold.type() + " transaction with no pending hold");
         hold.complete(); // throws if already resolved — fail fast before touching accounts
 
         Account sender = resolveParty(hold.sender());
-        sender.settle(hold.amount());
         Account receiver = resolveParty(hold.receiver());
-        receiver.deposit(hold.amount());
+        settleByType(hold.type(), sender, receiver, hold.amount());
 
         Transaction settlement = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
                 Transaction.Stage.SETTLE, hold.id());
         settlement.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, hold.amount(), receiver.balance());
         settlement.complete();
+        settlement.addTransfer(sender.id(), receiver.id(), hold.amount());
 
         saveAll(sender, receiver, hold, settlement);
+        return settlement.id();
+    }
+
+
+    private void settleByType(Transaction.Type type, Account sender, Account receiver, Money amount) {
+        switch (type) {
+            case CASHOUT, TRANSFER -> {
+                sender.settle(amount);    // hold resolved successfully — clear it, money already left the balance
+                receiver.deposit(amount); // ...and lands with the receiver (system for cashout, the other user for transfer)
+            }
+            default -> throw new IllegalArgumentException("No settle handling for " + type);
+        }
     }
 
     @Transactional
@@ -120,7 +134,7 @@ public class TransactionApplicationService {
         hold.fail(); // throws if already resolved — fail fast before touching accounts
 
         Account holder = resolveParty(hold.sender());
-        holder.release(hold.amount());
+        releaseByType(hold.type(), holder, hold.amount());
 
         Transaction releaseTx = Transaction.start(hold.type(), hold.sender(), hold.receiver(), hold.amount(),
                 Transaction.Stage.RELEASE, hold.id());
@@ -131,6 +145,13 @@ public class TransactionApplicationService {
         transactionRepository.save(hold);
         transactionRepository.save(releaseTx);
         publishEvents(holder);
+    }
+
+    private void releaseByType(Transaction.Type type, Account holder, Money amount) {
+        switch (type) {
+            case CASHOUT, TRANSFER -> holder.release(amount); // undo the hold — only the sender was ever touched
+            default -> throw new IllegalArgumentException("No release handling for " + type);
+        }
     }
 
     // Resolves an internal Party (sender or receiver) back to the Account it names — the Transaction
