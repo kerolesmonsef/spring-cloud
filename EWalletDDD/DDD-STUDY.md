@@ -35,10 +35,11 @@
 - [ ] 5. Domain events across contexts + Outbox pattern (replace in-process ApplicationEventPublisher)
 - [ ] 6. Onboarding context — sequential steps, resume, OnboardingCompleted event → open account
 - [ ] 7. Compliance review flow (PENDING_REVIEW threshold via config port)
+- [x] **8. Pricing context** — no aggregate, read-only fee config (p_fee_charges) + pure calculation domain service (2026-07-21)
 
 ## Current status
 
-Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). **Transfer context** added 2026-07-21 (P2P, no rail, hold+settle atomic in one call — see note below). Tests green.
+Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). **Transfer context** added 2026-07-21 (P2P, no rail, hold+settle atomic in one call — see note below). **Pricing context** added 2026-07-21 (no aggregate — read-only fee config + calculation domain service, see note below). Tests green.
 
 ```
 com.keroles.ewalletddd/
@@ -126,6 +127,32 @@ com.keroles.ewalletddd/
     presentation/                   TransferController (POST /transfers, GET /{id}),
                                     requests/ (CreateTransferRequest), responses/ (TransferResponse),
                                     TransferExceptionHandler (scoped)
+  pricing/
+    domain/valueObject/            TransactionType (own copy: TOPUP/TRANSFER/CASHOUT), FeeType (VALUE/PERCENTAGE),
+                                    FeeChargeRule (transactionType, senderFee+Type, receiverFee+Type, vatPercentage;
+                                    static zero(transactionType) — all-zero rule, used when no config row exists),
+                                    FeeCalculationResult (senderTotalAmount, receiverTotalAmount, senderFeeValue,
+                                    receiverFeeValue, senderVatValue, receiverVatValue — all Money;
+                                    senderFees()/receiverFees() = fee+vat per side)
+    domain/repository/             FeeChargeRepository (port: findByTransactionType → FeeChargeRule, never empty)
+    domain/service/                FeeCalculationService — pure calc, no Spring, branches on rule.transactionType():
+                                    TOPUP → senderFeeValue forced zero (sender is the SYSTEM account, never charged),
+                                    CASHOUT → receiverFeeValue forced zero (receiver is the SYSTEM account),
+                                    TRANSFER → both sides charged as configured. VALUE fee is flat, PERCENTAGE fee =
+                                    amount * fee/100; vat = feeValue * vatPercentage/100 (per side). senderTotalAmount
+                                    = amount + senderFeeValue + senderVatValue (surcharge, what sender pays out);
+                                    receiverTotalAmount = amount - receiverFeeValue - receiverVatValue (deduction,
+                                    what receiver nets) — these two feed the future ledger posting step (sender→fee,
+                                    sender→vat, receiver→fee, receiver→vat movements)
+    application/                    PricingApplicationService — THE front door: calculateFees(transactionType,
+                                    amount) → FeeCalculationResult; loads the rule (never throws — an unconfigured
+                                    transactionType resolves to FeeChargeRule.zero(), i.e. a free transaction),
+                                    delegates to the domain service
+    infrastructure/persistence/     entity(FeeChargeJpaEntity)/mapper(FeeChargeMapper.toDomain(transactionType, row)
+                                    — row null → FeeChargeRule.zero(transactionType))/repository(SpringDataFeeChargeJpa)/
+                                    adapter (JpaFeeChargeRepositoryAdapter implements FeeChargeRepository) —
+                                    read-only, p_fee_charges, no @Version (config data, not an aggregate)
+    (no presentation/ yet — nothing asked for a REST edge)
 ```
 
 Notes:
@@ -178,5 +205,15 @@ Transfer context (2026-07-21):
 - **ACL**: `transfer.infrastructure.ledger.LedgerTransferAdapter` is the ONLY transfer class importing `accounting.*`.
 - **Naming collision avoided**: the JPA entity is `TransferRequestJpaEntity`, not `TransferJpaEntity` — accounting already has a `TransferJpaEntity` (the embedded `a_transfers` audit row on `Transaction`, see the `transfers` note above), and Hibernate entity names must be distinct even across packages.
 - Tests: `TransferTest` (pure domain — `complete()` sets fields + raises one event, `restore()` raises none), `TransferApplicationServiceIT` (`@SpringBootTest`, real ledger: happy path moves both balances and settles the hold immediately, insufficient balance throws, self-transfer throws).
+
+Pricing context (2026-07-21):
+- **No aggregate — `p_fee_charges` IS the whole model.** Unlike Cashout/Topup/Transfer (state machines with lifecycle), Pricing has nothing to save/transition; it's a rate table plus a pure calculator. So there's no `domain/model/`, no `Option B save`, no `@Version` — just a read-only `domain/repository/` port + `domain/service/` calculator, which is more layering than accounting's own reference data uses (AccountType/Currency skip the port and are read directly by infra) but matches the aggregate-context shape for consistency, since `PricingApplicationService` needed a domain abstraction to depend on rather than a JPA entity.
+- **Own `TransactionType` copy** (`TOPUP`/`TRANSFER`/`CASHOUT`) — same per-context isolation law as Cashout/Topup's own `Rail` copies. Does NOT reference `accounting.domain.model.Transaction.Type` (crossing that boundary is forbidden — only the accounting application service is reachable from outside).
+- **Seeded from `accounting/infrastructure/reference/ReferenceDataSeeder.java` directly** (per explicit instruction), not a Pricing-owned seeder — `SpringDataFeeChargeJpa` injected alongside the existing raw repos, idempotent via `existsByTransactionType`. This is a deliberate extension of the already-sanctioned "infra-to-infra, pure seed data" exception (used for system accounts) — now crossing a context boundary (accounting infra → pricing infra) rather than staying within one, so it's a slightly bigger exception than before. Seeded 3 rows, one per type, mixing VALUE/PERCENTAGE across sender/receiver: TOPUP (sender 1.5% / receiver flat 1.00), CASHOUT (sender flat 5.00 / receiver 0.5%), TRANSFER (sender 1% / receiver flat 0.00) — all at 5% VAT.
+  **Stale since the sender/receiver-exempt-side business rule below was added**: `FeeCalculationService` now force-zeroes `senderFeeValue` for TOPUP and `receiverFeeValue` for CASHOUT regardless of config, so the seeded TOPUP sender fee (1.50%) and CASHOUT receiver fee (0.5%) are dead values — never applied. Not yet cleaned up in the seeder; harmless (ignored, not wrong-charged) but worth zeroing there too for honesty.
+- **`FeeType.VALUE` fees must be seeded at ≤2dp** — `Money`'s constructor (`shared/domain/Money.java`) calls `setScale(2)` with no rounding mode, so an unrounded flat fee throws `ArithmeticException` the first time it's calculated. The domain service also explicitly rounds every computed value (`HALF_UP`, scale 2) before wrapping in `Money`, since the `PERCENTAGE` path can otherwise produce more than 2 decimals.
+- **No currency column on `p_fee_charges`** (per the given schema) — a flat `VALUE` fee is a bare number, applied in whatever currency the priced `Money` amount already carries. Fine for this single-default-currency demo; would need a currency column if fees ever needed to differ by currency.
+- Tests: `FeeCalculationServiceTest` (pure domain, no Spring) — one case per transaction type proving the exempt side is force-zeroed (TOPUP: sender free, CASHOUT: receiver free, TRANSFER: both charged) plus a `FeeChargeRule.zero()` case (unconfigured type ⇒ free). `FeeChargeMapperTest` — no row found ⇒ `FeeChargeRule.zero(transactionType)`.
+- **Deferred**: no REST edge (nothing asked); no `PENDING_REVIEW`-style config port; `totalAmount` formula is a judgment call (see domain/service note above) — flag if the intended shape differs.
 
 Next session: step 4 — rail webhooks + normalize-to-async saga spine.

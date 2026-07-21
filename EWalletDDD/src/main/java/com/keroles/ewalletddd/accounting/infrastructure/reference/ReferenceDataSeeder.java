@@ -4,6 +4,8 @@ import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.Accou
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.UserJpaEntity;
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataAccountJpa;
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataUserJpa;
+import com.keroles.ewalletddd.pricing.infrastructure.persistence.entity.FeeChargeJpaEntity;
+import com.keroles.ewalletddd.pricing.infrastructure.persistence.repository.SpringDataFeeChargeJpa;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -27,17 +29,20 @@ public class ReferenceDataSeeder implements CommandLineRunner {
     private final CurrencyRepository currencies;
     private final SpringDataAccountJpa accounts;
     private final SpringDataUserJpa users;
+    private final SpringDataFeeChargeJpa feeCharges;
     private final String defaultCurrency;
 
     public ReferenceDataSeeder(AccountTypeRepository accountTypes,
                                CurrencyRepository currencies,
                                SpringDataAccountJpa accounts,
                                SpringDataUserJpa users,
+                               SpringDataFeeChargeJpa feeCharges,
                                @Value("${default.currency:AED}") String defaultCurrency) {
         this.accountTypes = accountTypes;
         this.currencies = currencies;
         this.accounts = accounts;
         this.users = users;
+        this.feeCharges = feeCharges;
         this.defaultCurrency = defaultCurrency;
     }
 
@@ -49,11 +54,30 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         seedType("user");
 
         List<String> supported = List.of(defaultCurrency, "ETH", "SOL", "BTC");
-        UserJpaEntity systemUser = systemUser(); 
+        UserJpaEntity systemUser = systemUser();
         for (String code : supported) {
             CurrencyJpaEntity currency = seedCurrency(code);
-            ensureSystemAccount(systemType, currency, systemUser); 
+            ensureSystemAccount(systemType, currency, systemUser);
         }
+
+        seedFeeCharge("TOPUP", new BigDecimal("1.50"), "PERCENTAGE", new BigDecimal("1.00"), "VALUE", new BigDecimal("5.00"));
+        seedFeeCharge("CASHOUT", new BigDecimal("5.00"), "VALUE", new BigDecimal("0.50"), "PERCENTAGE", new BigDecimal("5.00"));
+        seedFeeCharge("TRANSFER", new BigDecimal("1.00"), "PERCENTAGE", new BigDecimal("0.00"), "VALUE", new BigDecimal("5.00"));
+    }
+
+
+    private void seedFeeCharge(String transactionType, BigDecimal senderFee, String senderFeeType,
+                                BigDecimal receiverFee, String receiverFeeType, BigDecimal vatPercentage) {
+        if (feeCharges.existsByTransactionType(transactionType)) return;
+        FeeChargeJpaEntity row = new FeeChargeJpaEntity();
+        row.setTransactionType(transactionType);
+        row.setSenderFee(senderFee);
+        row.setSenderFeeType(senderFeeType);
+        row.setReceiverFee(receiverFee);
+        row.setReceiverFeeType(receiverFeeType);
+        row.setVatPercentage(vatPercentage);
+        row.setCreatedAt(Instant.now());
+        feeCharges.save(row);
     }
 
     
