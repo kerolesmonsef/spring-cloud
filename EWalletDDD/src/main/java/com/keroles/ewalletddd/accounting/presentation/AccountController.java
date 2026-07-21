@@ -59,13 +59,4 @@ public class AccountController {
         transactionService.topup(accountId, new Money(request.amount(), account.currency()));
         return AccountResponse.from(accountService.getAccount(accountId));
     }
-
-    
-    @PostMapping("/{id}/transfer/{toId}")
-    public AccountResponse transfer(@PathVariable Long id, @PathVariable Long toId, @RequestBody MoneyRequest request) {
-        AccountId fromId = new AccountId(id);
-        Account from = accountService.getAccount(fromId);
-        transactionService.transfer(fromId, new AccountId(toId), new Money(request.amount(), from.currency()));
-        return AccountResponse.from(accountService.getAccount(fromId));
-    }
 }

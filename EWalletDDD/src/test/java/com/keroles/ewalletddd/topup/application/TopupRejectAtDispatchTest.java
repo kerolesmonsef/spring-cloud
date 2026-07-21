@@ -43,7 +43,7 @@ class TopupRejectAtDispatchTest {
 
     static class RecordingLedger implements LedgerTopupPort {
         boolean credited;
-        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount, TopupId idempotencyKey) {
+        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount) {
             credited = true;
             return new LedgerTransactionRef(UUID.randomUUID());
         }

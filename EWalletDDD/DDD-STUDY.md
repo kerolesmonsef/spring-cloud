@@ -22,7 +22,7 @@
 - Repository save = **Option B**: adapter loads managed JPA entity, copies state onto it → dirty checking UPDATEs, `@Version` optimistic lock works, domain stays version-free.
 - Idempotency = guarded state transitions on the aggregate (duplicate settle throws), not ifs in controllers.
 - **Tables belong to ONE context, full stop.** Other contexts never SELECT them, never see the JPA entities — only the owning context's application service (or its events). Schema is an implementation detail behind the front door; that's what makes the future microservice split cheap (database-per-service is already true logically).
-- **Table prefix = ownership**: Accounting tables are `a_*` (a_users, a_accounts, a_transactions, a_transaction_entries). Cashout is `c_*`, Topup `t_*` (t_topup_requests), Onboarding `o_*`. Prefix makes context ownership visible in the schema itself.
+- **Table prefix = ownership**: Accounting tables are `a_*` (a_users, a_accounts, a_transactions, a_transaction_entries). Cashout is `c_*`, Topup `t_*` (t_topup_requests), Transfer `tr_*` (tr_transfers — `t_` was already Topup's), Onboarding `o_*`. Prefix makes context ownership visible in the schema itself.
 - **No shared users table**: Onboarding will get its OWN users table (o_users) with its own shape (steps, KYC, status). Same real-world person, two models, linked by UserId, synced by events. Duplication is deliberate decoupling.
 - Enforcement is discipline in a monolith — add an ArchUnit test when Cashout starts: no class outside `accounting..` depends on `accounting.domain..` or `accounting.infrastructure..`; only `accounting.application..` is reachable.
 
@@ -38,7 +38,7 @@
 
 ## Current status
 
-Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). 46 tests green.
+Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). **Transfer context** added 2026-07-21 (P2P, no rail, hold+settle atomic in one call — see note below). Tests green.
 
 ```
 com.keroles.ewalletddd/
@@ -108,6 +108,24 @@ com.keroles.ewalletddd/
     presentation/                   TopupController (POST /topups, GET, POST /{id}/confirm|/fail),
                                     requests/ (CreateTopupRequest), responses/ (TopupResponse),
                                     TopupExceptionHandler (scoped)
+  transfer/
+    domain/model/                   Transfer (aggregate, no state machine — complete()/restore() only,
+                                    hold+settle already resolved by the time it's constructed)
+    domain/valueObject/             TransferId (UUID), LedgerAccountRef (Long, own copy),
+                                    LedgerHoldRef (UUID), LedgerSettleRef (UUID)
+    domain/event/                   TransferCompletedEvent
+    domain/repository/              TransferRepository (port)
+    domain/port/                    LedgerTransferPort (hold(from,to,amount), settle(holdRef))
+    application/                    TransferApplicationService — THE front door:
+                                    requestTransfer(from,to,amount)→TransferId (hold+settle in one
+                                    @Transactional call, self-transfer guarded), get(id)
+    infrastructure/persistence/     entity(TransferRequestJpaEntity)/mapper/repository/adapter
+                                    (Option B, tr_transfers, @Version)
+    infrastructure/ledger/          LedgerTransferAdapter — the ACL, ONLY transfer class importing
+                                    accounting.*; calls the existing TransactionApplicationService.transfer
+    presentation/                   TransferController (POST /transfers, GET /{id}),
+                                    requests/ (CreateTransferRequest), responses/ (TransferResponse),
+                                    TransferExceptionHandler (scoped)
 ```
 
 Notes:
@@ -151,5 +169,14 @@ Topup context (2026-07-20) — spec `docs/superpowers/specs/2026-07-20-topup-con
 - **Bean-name gotcha**: both cashout and topup have a class `MbankAdapter` → same default bean name `mbankAdapter` → `ConflictingBeanDefinitionException`. Fixed by `@Component("topupMbankAdapter")` on topup's; routing is by `rail()` so the bean name is functionally irrelevant.
 - **ACL**: `topup.infrastructure.ledger.LedgerTopupAdapter` is the ONLY topup class importing `accounting.*` (depends on `TransactionApplicationService` + the id VOs). Same future-ArchUnit rule as Cashout's adapter.
 - Tests: `TopupRequestTest` (pure domain, state machine), `TopupApplicationServiceIT` (@SpringBootTest, real ledger + fake rails: Mbank credits at dispatch, Tcs pending→confirm credits, Tcs fail leaves balance untouched, double-confirm credited once), `TopupRejectAtDispatchTest` (pure fakes, REJECTED branch the real fakes can't reach).
+
+Transfer context (2026-07-21):
+- **P2P, no rail, no hold/settle split in time.** `TransactionApplicationService.transfer(from,to,amount)` and its generic `settle`/`release` (already handling `TRANSFER` type alongside `CASHOUT`) predate this context — Transfer's ACL just calls `ledger.transfer` for hold then `ledger.settle` for settle, back to back, inside ONE `@Transactional` app-service method. No external rail means no PENDING outcome is possible, so there's nothing to wait on — either both ledger calls succeed and the aggregate is persisted COMPLETED, or an exception (e.g. `InsufficientBalanceException`) rolls the whole transaction back and nothing is persisted. No `release()` call needed on the Transfer port — there is no code path that holds and then decides not to settle.
+- **`Transfer` aggregate has no state machine**: unlike `CashoutRequest`/`TopupRequest`, it's constructed already-complete via `Transfer.complete(from,to,amount,holdRef,settleRef)` — both refs are always present (both columns `NOT NULL` on `tr_transfers`, unlike Cashout's nullable `ledgerSettleRef`). `restore()` rehydrates from persistence; no other verbs.
+- **Self-transfer guard lives in the application service**, before the ledger call (`if (fromAccount.equals(toAccount)) throw new IllegalArgumentException(...)`) — not in the aggregate, because the aggregate doesn't exist yet at that point and the check must happen before the ledger does two loads of what could be the same account. Precedent: `TransactionApplicationService`'s own `loadAccount`/`loadSystemAccount` guards also live in application, not domain, in this codebase.
+- **Removed** `AccountController.transfer` (`POST /accounts/{id}/transfer/{toId}`) — it only called `ledger.transfer` (hold) with no way to ever settle or release it, so funds could get stuck in `holdBalance` forever. `TransferController` (`POST /transfers`) is now the only way to move money user→user.
+- **ACL**: `transfer.infrastructure.ledger.LedgerTransferAdapter` is the ONLY transfer class importing `accounting.*`.
+- **Naming collision avoided**: the JPA entity is `TransferRequestJpaEntity`, not `TransferJpaEntity` — accounting already has a `TransferJpaEntity` (the embedded `a_transfers` audit row on `Transaction`, see the `transfers` note above), and Hibernate entity names must be distinct even across packages.
+- Tests: `TransferTest` (pure domain — `complete()` sets fields + raises one event, `restore()` raises none), `TransferApplicationServiceIT` (`@SpringBootTest`, real ledger: happy path moves both balances and settles the hold immediately, insufficient balance throws, self-transfer throws).
 
 Next session: step 4 — rail webhooks + normalize-to-async saga spine.
