@@ -135,11 +135,16 @@ com.keroles.ewalletddd/
                                     receiverFeeValue, senderVatValue, receiverVatValue — all Money;
                                     senderFees()/receiverFees() = fee+vat per side)
     domain/repository/             FeeChargeRepository (port: findByTransactionType → FeeChargeRule, never empty)
-    domain/service/                FeeCalculationService — pure calc, no Spring, branches on rule.transactionType():
-                                    TOPUP → senderFeeValue forced zero (sender is the SYSTEM account, never charged),
-                                    CASHOUT → receiverFeeValue forced zero (receiver is the SYSTEM account),
-                                    TRANSFER → both sides charged as configured. VALUE fee is flat, PERCENTAGE fee =
-                                    amount * fee/100; vat = feeValue * vatPercentage/100 (per side). senderTotalAmount
+    domain/service/                FeeCalculationService — pure calc, no Spring; dispatches to one
+                                    FeeCalculationStrategy per rule.transactionType() (strategy pattern, package-
+                                    private, stateless, picked via switch — no Spring bean/registry needed):
+                                    TopupFeeCalculationStrategy → senderFeeValue forced zero (sender is the SYSTEM
+                                    account, never charged), CashoutFeeCalculationStrategy → receiverFeeValue forced
+                                    zero (receiver is the SYSTEM account), TransferFeeCalculationStrategy → both
+                                    sides charged as configured. FeeMath (package-private static helper) holds the
+                                    shared math so it isn't tripled across strategies: VALUE fee is flat, PERCENTAGE
+                                    fee = amount * fee/100; vat = feeValue * vatPercentage/100 (per side, always
+                                    derived from feeValue so a zeroed fee cascades to a zeroed vat). senderTotalAmount
                                     = amount + senderFeeValue + senderVatValue (surcharge, what sender pays out);
                                     receiverTotalAmount = amount - receiverFeeValue - receiverVatValue (deduction,
                                     what receiver nets) — these two feed the future ledger posting step (sender→fee,
