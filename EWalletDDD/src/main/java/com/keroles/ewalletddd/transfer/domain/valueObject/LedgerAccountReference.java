@@ -1,3 +1,3 @@
 package com.keroles.ewalletddd.transfer.domain.valueObject;
 
-public record LedgerAccountRef(Long value) {}
+public record LedgerAccountReference(String value) {}

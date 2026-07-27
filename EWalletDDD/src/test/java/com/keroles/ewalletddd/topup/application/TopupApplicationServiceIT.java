@@ -2,9 +2,9 @@ package com.keroles.ewalletddd.topup.application;
 
 import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.topup.domain.model.TopupRequest;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
 import com.keroles.ewalletddd.shared.domain.Currency;
@@ -29,18 +29,18 @@ class TopupApplicationServiceIT {
 
     private final Currency AED = Currency.of("AED");
 
-    private LedgerAccountRef newAccount() {
-        AccountId id = accountService.openAccount(null, AED); 
-        return new LedgerAccountRef(id.value());
+    private LedgerAccountReference newAccount() {
+        AccountReference ref = accountService.openAccount(null, AED);
+        return new LedgerAccountReference(ref.value());
     }
 
-    private Account ledger(LedgerAccountRef ref) {
-        return accountService.getAccount(new AccountId(ref.value()));
+    private Account ledger(LedgerAccountReference ref) {
+        return accountService.getAccount(new AccountReference(ref.value()));
     }
 
     @Test
     void syncRailCreditsAtDispatch_noCallbackNeeded() {
-        LedgerAccountRef acc = newAccount();
+        LedgerAccountReference acc = newAccount();
         assertEquals(Money.zero(AED), ledger(acc).balance());
 
         TopupId id = topupService.requestTopup(acc, Money.of("40.00", "AED"), Rail.MBANK);
@@ -57,7 +57,7 @@ class TopupApplicationServiceIT {
 
     @Test
     void asyncRailStaysPending_untilConfirmCredits() {
-        LedgerAccountRef acc = newAccount();
+        LedgerAccountReference acc = newAccount();
 
         TopupId id = topupService.requestTopup(acc, Money.of("40.00", "AED"), Rail.TCS);
 
@@ -74,7 +74,7 @@ class TopupApplicationServiceIT {
 
     @Test
     void asyncRailFail_leavesBalanceUntouched() {
-        LedgerAccountRef acc = newAccount();
+        LedgerAccountReference acc = newAccount();
 
         TopupId id = topupService.requestTopup(acc, Money.of("40.00", "AED"), Rail.TCS);
         topupService.fail(id);
@@ -85,7 +85,7 @@ class TopupApplicationServiceIT {
 
     @Test
     void doubleConfirmIsRejected_creditedOnce() {
-        LedgerAccountRef acc = newAccount();
+        LedgerAccountReference acc = newAccount();
         TopupId id = topupService.requestTopup(acc, Money.of("30.00", "AED"), Rail.TCS);
         topupService.confirm(id);
 

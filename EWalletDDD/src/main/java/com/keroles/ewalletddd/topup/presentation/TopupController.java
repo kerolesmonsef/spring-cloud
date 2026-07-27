@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.topup.presentation;
 
 import com.keroles.ewalletddd.topup.application.TopupApplicationService;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
 import com.keroles.ewalletddd.topup.presentation.requests.CreateTopupRequest;
@@ -33,7 +33,7 @@ public class TopupController {
     @ResponseStatus(HttpStatus.CREATED)
     public TopupResponse request(@RequestBody CreateTopupRequest request) {
         TopupId id = topupService.requestTopup(
-                new LedgerAccountRef(request.accountId()),
+                new LedgerAccountReference(request.accountReference()),
                 new Money(request.amount(), Currency.of(request.currency())),
                 Rail.valueOf(request.rail().toUpperCase()));
         return TopupResponse.from(topupService.get(id));

@@ -32,7 +32,7 @@ class CashoutRejectAtDispatchTest {
         CashoutApplicationService service =
                 new CashoutApplicationService(repo, ledger, rejecting, event -> {});
 
-        CashoutId id = service.requestCashout(new LedgerAccountRef(7L), Money.of("25.00", "AED"), Rail.AANI);
+        CashoutId id = service.requestCashout(new LedgerAccountReference("7"), Money.of("25.00", "AED"), Rail.AANI);
 
         CashoutRequest saved = repo.findById(id).orElseThrow();
         assertEquals(CashoutRequest.Status.FAILED, saved.status());
@@ -45,7 +45,7 @@ class CashoutRejectAtDispatchTest {
         final LedgerReservationRef reservation = new LedgerReservationRef(UUID.randomUUID());
         boolean released, settled;
         LedgerReservationRef releasedRef;
-        public LedgerReservationRef reserve(LedgerAccountRef account, Money amount) { return reservation; }
+        public LedgerReservationRef reserve(LedgerAccountReference account, Money amount) { return reservation; }
         public LedgerSettleRef settle(LedgerReservationRef r) { settled = true; return new LedgerSettleRef(UUID.randomUUID()); }
         public void release(LedgerReservationRef r) { released = true; releasedRef = r; }
     }

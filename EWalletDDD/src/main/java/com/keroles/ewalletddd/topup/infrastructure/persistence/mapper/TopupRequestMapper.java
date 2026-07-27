@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.topup.infrastructure.persistence.mapper;
 
 import com.keroles.ewalletddd.topup.domain.model.TopupRequest;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
@@ -17,7 +17,7 @@ public final class TopupRequestMapper {
         Currency currency = Currency.of(row.getCurrency());
         return TopupRequest.restore(
                 new TopupId(row.getId()),
-                new LedgerAccountRef(row.getAccountRef()),
+                new LedgerAccountReference(row.getAccountRef()),
                 new Money(row.getAmount(), currency),
                 Rail.valueOf(row.getRail()),
                 TopupRequest.Status.valueOf(row.getStatus()),

@@ -36,10 +36,12 @@
 - [ ] 6. Onboarding context — sequential steps, resume, OnboardingCompleted event → open account
 - [ ] 7. Compliance review flow (PENDING_REVIEW threshold via config port)
 - [x] **8. Pricing context** — no aggregate, read-only fee config (p_fee_charges) + pure calculation domain service (2026-07-21)
+- [x] **9. Transfer fee/vat ledger legs** — Transfer calls Pricing via its own ACL, builds sender/receiver fee+vat legs itself, Accounting records them as extra audit rows on settle (2026-07-25)
+- [x] **9b. Transfer fee/vat real balance movement, sender side** — hold reserves amount+senderFee+senderVat, settle credits FEE/VAT accounts for real out of that reservation; receiver side stays audit-only (2026-07-26)
 
 ## Current status
 
-Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). **Transfer context** added 2026-07-21 (P2P, no rail, hold+settle atomic in one call — see note below). **Pricing context** added 2026-07-21 (no aggregate — read-only fee config + calculation domain service, see note below). Tests green.
+Step 3 done. Cashout context complete through all layers (vertical slice, simulated callback). Ledger movements are topup/transfer/cashout (SYSTEM-backed). **Topup context** added 2026-07-20 (same rail/state-machine skeleton as Cashout, but **no hold** — see note below). **Transfer context** added 2026-07-21 (P2P, no rail, hold+settle atomic in one call — see note below). **Pricing context** added 2026-07-21 (no aggregate — read-only fee config + calculation domain service, see note below). **Transfer fee/vat ledger legs** added 2026-07-25 (spec: `docs/superpowers/specs/2026-07-24-transfer-fee-vat-ledger-legs-design.md`) — closes the "future ledger posting step" Pricing flagged: on settle, Transfer now records up to 4 extra `a_transfers` audit rows (sender→fee, sender→vat, receiver→fee, receiver→vat), zero-amount legs skipped. **Transfer fee/vat real balance movement, sender side** added 2026-07-26 — un-defers the sender half of that spec's "audit-only" scope: `requestTransfer` now holds `amount+senderFee+senderVat` (not just `amount`), and settle actually credits the `FEE`/`VAT` accounts with the sender's cut (`legReceiver.deposit(...)`, not just an audit row) while still crediting the receiver only the principal. Receiver-side fee/vat stays audit-only (always zero under today's seeded TRANSFER rule, so nothing to un-defer there yet). Tests green.
 
 ```
 com.keroles.ewalletddd/
@@ -49,7 +51,9 @@ com.keroles.ewalletddd/
                                     Transaction (+nested Entry/Transfer/Type/Status/Direction, restore),
                                     User (minimal aggregate: id+createdAt only — Onboarding owns the rich User)
     domain/valueObject/             AccountId (Long, DB auto-increment), TransactionId (UUID, domain-generated),
-                                    AccountReference (UUID), AccountType (SYSTEM/USER/EXTERNAL),
+                                    AccountReference (String — was UUID; static FEE/VAT constants for the two
+                                    well-known accounts, newRef() still random-UUID-as-string for normal accounts),
+                                    AccountType (SYSTEM/USER/EXTERNAL/FEE/VAT),
                                     Party (VO: String reference + AccountType — a tx endpoint, incl. external)
     domain/event/                   *Event records: AccountOpenedEvent, MoneyDepositedEvent, MoneyWithdrawnEvent,
                                     FundsHeldEvent, FundsSettledEvent, FundsReleasedEvent
@@ -62,7 +66,24 @@ com.keroles.ewalletddd/
                                       topup(user, amount)          system.withdraw + user.deposit, 2 entries, COMPLETED
                                       transfer(from, to, amount)   from.withdraw + to.deposit, 2 entries, COMPLETED
                                       cashout(user, amount)→txId   user.hold, 1 entry (user DEBIT), PENDING, receiver=SYSTEM
-                                      settle(txId)                 user.settle + system.deposit + system CREDIT entry, COMPLETED
+                                      settle(txId)                 user.settle + system.deposit + system CREDIT entry,
+                                                                    COMPLETED, sender→receiver a_transfers row
+                                                                    (delegates to settle(txId, List.of()))
+                                      settle(txId, feeLegs)        delegates to the 3-arg overload below with
+                                                                    receiverCredit = the hold's own amount (no
+                                                                    split) — Cashout/Topup's unchanged shape
+                                      settle(txId, receiverCredit, TransferLegDTO(senderId,receiverId,amount)),
+                                              feeLegs)              sender.settle(heldAmount) [full hold, may be
+                                                                    > receiverCredit] + receiver.deposit(receiverCredit),
+                                                                    sender→receiver a_transfers row = receiverCredit,
+                                                                    then loops feeLegs: skips zero-amount, for each
+                                                                    non-zero leg whose senderId == the hold's own
+                                                                    sender, ALSO does legReceiver.deposit(amount) +
+                                                                    save + publish (real balance movement — the
+                                                                    2026-07-26 change) before writing the audit
+                                                                    a_transfers row; legs paid by the receiver stay
+                                                                    audit-only (no deposit) — only caller today is
+                                                                    Transfer, via LedgerTransferAdapter
                                       release(txId)                user.release only, FAILED
                                       loadSystemAccount(currency)  throws IllegalStateException if missing
     infrastructure/persistence/
@@ -113,17 +134,30 @@ com.keroles.ewalletddd/
     domain/model/                   Transfer (aggregate, no state machine — complete()/restore() only,
                                     hold+settle already resolved by the time it's constructed)
     domain/valueObject/             TransferId (UUID), LedgerAccountRef (Long, own copy),
-                                    LedgerHoldRef (UUID), LedgerSettleRef (UUID)
+                                    LedgerHoldRef (UUID), LedgerSettleRef (UUID),
+                                    FeeLeg (Payer SENDER/RECEIVER, FeeTarget FEE/VAT, Money — transfer's own
+                                    leg shape, mirrors accounting's TransferLegDTO)
     domain/event/                   TransferCompletedEvent
     domain/repository/              TransferRepository (port)
-    domain/port/                    LedgerTransferPort (hold(from,to,amount), settle(holdRef))
+    domain/port/                    LedgerTransferPort (hold(from,to,amount), settle(holdRef, principal, List<FeeLeg>)
+                                    — principal added 2026-07-26, see below),
+                                    PricingPort (calculateTransferFees(amount)→FeeQuote — own ACL to Pricing;
+                                    FeeQuote.senderDebit(principal) = principal+senderFee+senderVat, added
+                                    2026-07-26 so the hold-total math lives on the quote, not inline in the app service)
     application/                    TransferApplicationService — THE front door:
-                                    requestTransfer(from,to,amount)→TransferId (hold+settle in one
-                                    @Transactional call, self-transfer guarded), get(id)
+                                    requestTransfer(from,to,amount)→TransferId (ask PricingPort for fees FIRST
+                                    — fail before any hold exists —, hold fees.senderDebit(amount) i.e.
+                                    amount+senderFee+senderVat, build 4 FeeLegs sender/receiver × fee/vat,
+                                    settle(hold, amount, legs) — amount here is the principal credited to the
+                                    receiver, in one @Transactional call, self-transfer guarded), get(id)
     infrastructure/persistence/     entity(TransferRequestJpaEntity)/mapper/repository/adapter
                                     (Option B, tr_transfers, @Version)
     infrastructure/ledger/          LedgerTransferAdapter — the ACL, ONLY transfer class importing
-                                    accounting.*; calls the existing TransactionApplicationService.transfer
+                                    accounting.*; calls TransactionApplicationService.transfer/settle(txId,
+                                    receiverCredit,legs), translates FeeLeg→accounting's TransferLegDTO
+    infrastructure/pricing/         PricingAdapter — the ACL, ONLY transfer class importing pricing.*;
+                                    calls PricingApplicationService.calculateFees(TransactionType.TRANSFER, amount),
+                                    extracts the 4 fields it needs from FeeCalculationResult into PricingPort.FeeQuote
     presentation/                   TransferController (POST /transfers, GET /{id}),
                                     requests/ (CreateTransferRequest), responses/ (TransferResponse),
                                     TransferExceptionHandler (scoped)
@@ -161,10 +195,11 @@ com.keroles.ewalletddd/
 ```
 
 Notes:
-- **Reference data (accounting-owned lookup)**: `a_account_types` (seeded `system`, `user`) + `a_currencies` (seeded from `default.currency` + ETH/SOL/BTC). Plain JPA in `accounting/infrastructure/reference/` (entities + Spring Data repos + `ReferenceDataSeeder` CommandLineRunner, existence-checked/idempotent).
-- **Account ↔ reference links**: `Account` aggregate carries an `AccountType` enum (valueObject, `SYSTEM`/`USER`/`EXTERNAL`), `Account.open` defaults `USER`. `a_accounts` FKs `currency_id`→a_currencies, `account_type_id`→a_account_types (both nullable — ddl-auto can't back-fill legacy rows; new accounts always set them). FKs resolved at INSERT in `JpaAccountRepositoryAdapter` (findByCode/findByName, cold-path); the `currency`(char3)/`account_type`(name) scalar columns remain the mapper's read source (FK associations never navigated). Unseeded currency at open → `IllegalArgumentException("Unsupported currency: ...")`.
+- **Reference data (accounting-owned lookup)**: `a_account_types` (seeded `system`, `user`, `fee`, `vat`) + `a_currencies` (seeded from `default.currency` + ETH/SOL/BTC). Plain JPA in `accounting/infrastructure/reference/` (entities + Spring Data repos + `ReferenceDataSeeder` CommandLineRunner, existence-checked/idempotent).
+- **Account ↔ reference links**: `Account` aggregate carries an `AccountType` enum (valueObject, `SYSTEM`/`USER`/`EXTERNAL`/`FEE`/`VAT`), `Account.open` defaults `USER`. `a_accounts` FKs `currency_id`→a_currencies, `account_type_id`→a_account_types (both nullable — ddl-auto can't back-fill legacy rows; new accounts always set them). FKs resolved at INSERT in `JpaAccountRepositoryAdapter` (findByCode/findByName, cold-path); the `currency`(char3)/`account_type`(name) scalar columns remain the mapper's read source (FK associations never navigated). Unseeded currency at open → `IllegalArgumentException("Unsupported currency: ...")`.
 - **Currency is a domain VO, not `java.util.Currency`**: the JDK type is ISO-4217 fiat-only (`getInstance("BTC"/"ETH"/"SOL")` throws), and supported currencies are a business set (a_currencies). `shared/domain/Currency` = `record(code)`; validity enforced at save (adapter's findByCode). `Money` scale is fixed at 2dp (`SCALE` const). Deferred: per-currency precision (crypto 8–18dp) needs `a_currencies.fraction_digits` + wider money columns (currently scale 4).
 - **System (house) accounts — repo-only seed (deliberate, per Keroles: "no domain, service and repositories only")**: `ReferenceDataSeeder` builds `AccountJpaEntity` rows DIRECTLY via `SpringDataAccountJpa` (no `Account` aggregate, no app-service method, no domain factory — `openSystem` was removed). One SYSTEM account per seeded currency, **genesis balance `1_000_000_000`**, holdBalance 0. Why so large: test funding switched from unlimited EXTERNAL deposit to `topup` (drawn from the shared system float); ITs commit to MySQL and the seeder is idempotent (won't refill), so a small float depletes within/across runs → random `InsufficientBalanceException`. Idempotent on `(account_type='system', currency)` via `existsByAccountTypeAndCurrency`. All under ONE shared system user (`findFirstByAccountType("system")` reuses the owner → no orphan users on re-run; else creates one `a_users` row). `run()` is `@Transactional` so get-or-create'd type/currency rows stay managed for the account inserts. This is the ONE sanctioned exception to "aggregate is the only door" — pure seed data, infra-to-infra. Deferred: genesis balance has no counterparty transaction (seed shortcut). Owner model = shared system user (alt: nullable `a_accounts.user_id`, blocked by ddl-auto not relaxing NOT NULL).
+- **FEE/VAT static accounts (2026-07-25) — ONE global row each, not per-currency.** `AccountReference` changed from `UUID` to `String` so the well-known literals `"FEE"`/`"VAT"` (constants `AccountReference.FEE`/`.VAT`) fit the same column normal accounts use for their random-UUID-as-string reference; `AccountJpaEntity.accountReference` followed (`UUID`→`String`, dropped `@JdbcTypeCode(SqlTypes.CHAR)` — plain `String` maps the existing `CHAR(36)` column fine, no migration). Seeded once via `ensureStaticAccount` (idempotent on `existsByAccountReference`, mirrors `ensureSystemAccount`'s shape), balance/hold 0, under `defaultCurrency` only, owned by the shared system user. **Deliberately NOT per-currency**: `accountReference` carries a DB `unique=true` constraint, so seeding `"FEE"` once per currency would collide on the second insert; since these rows are audit-only targets (an `AccountId` to stick on an `a_transfers` row, never a real balance mutation), one row total per static code is enough regardless of which currency the transfer itself is in.
 - **Gotcha fixed (relevant to step 6 open-then-fund)**: the read-only `user_id` mirror on `AccountJpaEntity` (insertable=false) is NOT populated on the in-persistence-context instance right after an INSERT. So opening an account and reloading/re-saving it in the SAME `@Transactional` used to read a null userId → `getReferenceById(null)` NPE. Guarded in `JpaAccountRepositoryAdapter.save` (sets the mirror after insert). Onboarding's "open account + fund on completion" is exactly this shape — the guard makes it safe.
 - `openAccount(userId?, currency)`: userId null -> registers new (minimal) User + account; userId given -> must exist. `a_accounts.user_id` is a real FK to `a_users` (JPA: lazy @ManyToOne only for the constraint + read-only mirror `user_id` column for mapping; adapter uses `getReferenceById` so no user SELECT on save).
 - **Ids**: AccountId/UserId are Long, DB auto-increment. Consequence: aggregate id is null until first save; adapter calls `assignId()` after INSERT; `AccountOpenedEvent` is raised by the APP SERVICE after save (documented exception to "events raised in aggregate" — the id is born in the DB). TransactionId stays UUID (domain-generated, char(36)).
@@ -207,9 +242,24 @@ Transfer context (2026-07-21):
 - **`Transfer` aggregate has no state machine**: unlike `CashoutRequest`/`TopupRequest`, it's constructed already-complete via `Transfer.complete(from,to,amount,holdRef,settleRef)` — both refs are always present (both columns `NOT NULL` on `tr_transfers`, unlike Cashout's nullable `ledgerSettleRef`). `restore()` rehydrates from persistence; no other verbs.
 - **Self-transfer guard lives in the application service**, before the ledger call (`if (fromAccount.equals(toAccount)) throw new IllegalArgumentException(...)`) — not in the aggregate, because the aggregate doesn't exist yet at that point and the check must happen before the ledger does two loads of what could be the same account. Precedent: `TransactionApplicationService`'s own `loadAccount`/`loadSystemAccount` guards also live in application, not domain, in this codebase.
 - **Removed** `AccountController.transfer` (`POST /accounts/{id}/transfer/{toId}`) — it only called `ledger.transfer` (hold) with no way to ever settle or release it, so funds could get stuck in `holdBalance` forever. `TransferController` (`POST /transfers`) is now the only way to move money user→user.
-- **ACL**: `transfer.infrastructure.ledger.LedgerTransferAdapter` is the ONLY transfer class importing `accounting.*`.
+- **ACL**: `transfer.infrastructure.ledger.LedgerTransferAdapter` is the ONLY transfer class importing `accounting.*`; `transfer.infrastructure.pricing.PricingAdapter` is the ONLY transfer class importing `pricing.*` (added 2026-07-25, see below) — two separate ACLs, one per context Transfer depends on.
 - **Naming collision avoided**: the JPA entity is `TransferRequestJpaEntity`, not `TransferJpaEntity` — accounting already has a `TransferJpaEntity` (the embedded `a_transfers` audit row on `Transaction`, see the `transfers` note above), and Hibernate entity names must be distinct even across packages.
-- Tests: `TransferTest` (pure domain — `complete()` sets fields + raises one event, `restore()` raises none), `TransferApplicationServiceIT` (`@SpringBootTest`, real ledger: happy path moves both balances and settles the hold immediately, insufficient balance throws, self-transfer throws).
+- Tests: `TransferTest` (pure domain — `complete()` sets fields + raises one event, `restore()` raises none), `TransferApplicationServiceIT` (`@SpringBootTest`, real ledger: happy path moves both balances and settles the hold immediately, insufficient balance throws, self-transfer throws, fee/vat legs recorded with zero-amount legs skipped).
+
+Transfer fee/vat ledger legs (2026-07-25) — spec `docs/superpowers/specs/2026-07-24-transfer-fee-vat-ledger-legs-design.md`:
+- **Started audit-only, closed the loop Pricing flagged; sender side became real balance movement 2026-07-26 (see next note).** On settle, up to 4 extra `a_transfers` rows are written for the fee/vat split (sender→fee, sender→vat, receiver→fee, receiver→vat), on top of the existing sender→receiver row.
+- **Leg-building lives in the CONSUMING context, not Pricing** (Keroles' explicit call): `TransferApplicationService.requestTransfer` calls `PricingPort.calculateTransferFees(amount)`, extracts the 4 `Money` fields it needs, and builds its own 4 `FeeLeg`s — `PricingApplicationService`/`FeeCalculationResult` stay untouched, a pure calculator with zero leg-building logic. Same shape will apply to Cashout/Topup when they get this treatment later, each building legs from its own transaction type.
+- **Zero-amount legs are silently skipped, never stored** — with today's seeded TRANSFER rule (sender 1%, receiver flat 0.00, 5% vat), a transfer produces sender→fee and sender→vat rows (both > 0) but no receiver→fee/vat rows (both zero). This is the normal case, not an error.
+- **`TransactionApplicationService.settle` overloads**: `settle(txId)` delegates to `settle(txId, List.of())` (Cashout/Topup keep calling the no-arg version, unaffected); that delegates to `settle(txId, receiverCredit, feeLegs)` with `receiverCredit` defaulted to the hold's own amount (no split, same as before). The 3-arg version loops the legs after the sender→receiver `addTransfer` (now written for `receiverCredit`, not the raw held amount), skips `leg.amount().isZero()`.
+- **Everything stays in ONE `@Transactional`** — hold, pricing lookup, and settle-with-legs all happen inside `requestTransfer`'s existing transaction boundary; no new transaction scopes.
+
+Transfer fee/vat real balance movement, sender side (2026-07-26):
+- **What changed**: `requestTransfer` now asks Pricing for fees *before* holding (fail before any hold exists, not after), and holds `fees.senderDebit(amount)` = `amount+senderFee+senderVat` instead of just `amount`. `FeeQuote.senderDebit(principal)` is the new named method (on the value object, not inline arithmetic in the app service). `ledger.settle(hold, amount, legs)` now passes the principal explicitly, since the hold's own amount (the gross) and the amount the receiver should be credited have diverged.
+- **Why `TransactionApplicationService` needed a real signature change, not just an app-service tweak**: `transfer()`'s hold and `settle()`'s credit used to be the same number by construction (`holdTransaction.amount()`). Inflating the hold without also telling settle what the receiver should actually get would have over-credited the receiver by `senderFee+senderVat` — caught before writing any code, by tracing `LedgerTransferAdapter.hold`→`TransactionApplicationService.transfer`→`Account.hold` (only debits `fromAccount`) and `.settle`→`settleByType` (`sender.settle(amount); receiver.deposit(amount)`, same `amount` both sides).
+- **Fix shape**: `Transaction.amount` keeps meaning "what was actually held/will be released on failure" (the gross, `amount+senderFee+senderVat`) — this is *more* correct than before for the release path (a failed/cancelled transfer now gives back the whole gross, not just the principal, automatically, with no code change needed there). `settle` grew a `receiverCredit` param (the principal) used only for the receiver's deposit + the audit `addTransfer` row; `sender.settle(...)` still consumes the full held amount, matching what was actually reserved.
+- **FEE/VAT accounts now actually get credited for the sender-side legs**: inside the `feeLegs` loop, when a leg's `senderId` equals the hold's own sender reference, `legReceiver.deposit(leg.amount())` runs (plus `accountRepository.save` + event publish) before the existing audit `addTransfer` row — the money that left the sender via the inflated hold now has somewhere real to land. Receiver-side legs (`senderId` = the hold's receiver) are untouched beyond the audit row, same as before — moot today since the seeded TRANSFER rule always zeroes them.
+- **Scope, confirmed with Keroles**: sender-side real movement only; receiver-side deduction (crediting the receiver less than principal when they owe their own fee/vat) stays deferred, since it's zero under every rule seeded so far.
+- **Test fallout**: `TransferApplicationServiceIT.requestTransfer_movesFundsAndSettlesImmediately` now asserts the sender ends at `100.00 - 40.00 - 0.40 - 0.02 = 59.58` (was `60.00` when fees were audit-only) and asserts the `FEE`/`VAT` account balances increased by `0.40`/`0.02` — measured as a **delta** (before/after), not an absolute value, because those two accounts are process-wide singletons shared across the whole persistent MySQL test DB (no per-test rollback), so an absolute assertion would be order-dependent and flaky against other tests/runs touching the same rows.
 
 Pricing context (2026-07-21):
 - **No aggregate — `p_fee_charges` IS the whole model.** Unlike Cashout/Topup/Transfer (state machines with lifecycle), Pricing has nothing to save/transition; it's a rate table plus a pure calculator. So there's no `domain/model/`, no `Option B save`, no `@Version` — just a read-only `domain/repository/` port + `domain/service/` calculator, which is more layering than accounting's own reference data uses (AccountType/Currency skip the port and are read directly by infra) but matches the aggregate-context shape for consistency, since `PricingApplicationService` needed a domain abstraction to depend on rather than a JPA entity.
@@ -220,5 +270,6 @@ Pricing context (2026-07-21):
 - **No currency column on `p_fee_charges`** (per the given schema) — a flat `VALUE` fee is a bare number, applied in whatever currency the priced `Money` amount already carries. Fine for this single-default-currency demo; would need a currency column if fees ever needed to differ by currency.
 - Tests: `FeeCalculationServiceTest` (pure domain, no Spring) — one case per transaction type proving the exempt side is force-zeroed (TOPUP: sender free, CASHOUT: receiver free, TRANSFER: both charged) plus a `FeeChargeRule.zero()` case (unconfigured type ⇒ free). `FeeChargeMapperTest` — no row found ⇒ `FeeChargeRule.zero(transactionType)`.
 - **Deferred**: no REST edge (nothing asked); no `PENDING_REVIEW`-style config port; `totalAmount` formula is a judgment call (see domain/service note above) — flag if the intended shape differs.
+- **First consumer (2026-07-25)**: Transfer, via its own `PricingPort`/`PricingAdapter` ACL (mirrors `LedgerTransferPort`/`LedgerTransferAdapter`) — see "Transfer fee/vat ledger legs" below. `PricingApplicationService`/`FeeCalculationResult` needed zero changes; Transfer just calls `calculateFees` and extracts what it needs.
 
 Next session: step 4 — rail webhooks + normalize-to-async saga spine.

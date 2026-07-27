@@ -32,6 +32,7 @@ class FeeCalculationServiceTest {
         assertEquals(Money.of("0.05", "AED"), result.receiverVatValue());
         assertEquals(Money.of("100.00", "AED"), result.senderTotalAmount());
         assertEquals(Money.of("98.95", "AED"), result.receiverTotalAmount());
+        assertEquals(Money.of("100.00", "AED"), result.senderNetAmount());
     }
 
     @Test
@@ -51,6 +52,7 @@ class FeeCalculationServiceTest {
         assertEquals(Money.of("0.00", "AED"), result.receiverVatValue());
         assertEquals(Money.of("1005.25", "AED"), result.senderTotalAmount());
         assertEquals(Money.of("1000.00", "AED"), result.receiverTotalAmount());
+        assertEquals(Money.of("1000.00", "AED"), result.senderNetAmount());
     }
 
     @Test
@@ -70,6 +72,7 @@ class FeeCalculationServiceTest {
         assertEquals(Money.of("0.10", "AED"), result.receiverVatValue());
         assertEquals(Money.of("202.10", "AED"), result.senderTotalAmount());
         assertEquals(Money.of("197.90", "AED"), result.receiverTotalAmount());
+        assertEquals(Money.of("200.00", "AED"), result.senderNetAmount());
     }
 
     @Test
@@ -81,5 +84,6 @@ class FeeCalculationServiceTest {
 
         assertEquals(Money.of("50.00", "AED"), result.senderTotalAmount());
         assertEquals(Money.of("50.00", "AED"), result.receiverTotalAmount());
+        assertEquals(Money.of("50.00", "AED"), result.senderNetAmount());
     }
 }

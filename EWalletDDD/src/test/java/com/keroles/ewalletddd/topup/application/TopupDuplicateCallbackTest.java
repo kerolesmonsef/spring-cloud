@@ -6,7 +6,7 @@ import com.keroles.ewalletddd.topup.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.topup.domain.port.TopupRailPort;
 import com.keroles.ewalletddd.topup.domain.port.TopupRailRegistry;
 import com.keroles.ewalletddd.topup.domain.repository.TopupRepository;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
@@ -37,7 +37,7 @@ class TopupDuplicateCallbackTest {
         TopupApplicationService service =
                 new TopupApplicationService(repo, ledger, pendingRail, event -> {});
 
-        TopupId id = service.requestTopup(new LedgerAccountRef(7L), Money.of("30.00", "AED"), Rail.TCS);
+        TopupId id = service.requestTopup(new LedgerAccountReference("7"), Money.of("30.00", "AED"), Rail.TCS);
         service.confirm(id);                                                  
         assertThrows(IllegalStateException.class, () -> service.confirm(id)); 
 
@@ -49,7 +49,7 @@ class TopupDuplicateCallbackTest {
     static class CountingLedger implements LedgerTopupPort {
         int credits;
         private final Set<TopupId> seen = new HashSet<>();
-        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount) {
+        public LedgerTransactionRef topup(LedgerAccountReference account, Money amount) {
             credits++;
             return new LedgerTransactionRef(UUID.randomUUID());
         }

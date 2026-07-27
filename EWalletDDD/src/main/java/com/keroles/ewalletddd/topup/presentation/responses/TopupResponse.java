@@ -5,7 +5,7 @@ import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 
 import java.math.BigDecimal;
 
-public record TopupResponse(String id, Long accountRef, BigDecimal amount, String currency,
+public record TopupResponse(String id, String accountRef, BigDecimal amount, String currency,
                             String rail, String status, String railReference, String ledgerTransactionRef) {
     public static TopupResponse from(TopupRequest t) {
         LedgerTransactionRef ref = t.ledgerTransactionRef();

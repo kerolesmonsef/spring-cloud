@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.cashout.domain.model;
 
 import com.keroles.ewalletddd.cashout.domain.exception.IllegalCashoutStateException;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CashoutRequestTest {
 
-    private final LedgerAccountRef account = new LedgerAccountRef(1L);
+    private final LedgerAccountReference account = new LedgerAccountReference("1");
     private final LedgerReservationRef reservation = new LedgerReservationRef(UUID.randomUUID());
     private final LedgerSettleRef settleRef = new LedgerSettleRef(UUID.randomUUID());
     private final Money amount = Money.of("50.00", "AED");

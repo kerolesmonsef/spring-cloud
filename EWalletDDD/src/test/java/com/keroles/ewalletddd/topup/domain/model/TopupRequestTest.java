@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.topup.domain.model;
 
 import com.keroles.ewalletddd.topup.domain.exception.IllegalTopupStateException;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.shared.domain.Money;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TopupRequestTest {
 
-    private final LedgerAccountRef account = new LedgerAccountRef(1L);
+    private final LedgerAccountReference account = new LedgerAccountReference("1");
     private final Money amount = Money.of("50.00", "AED");
     private final LedgerTransactionRef ledgerRef = new LedgerTransactionRef(UUID.randomUUID());
 

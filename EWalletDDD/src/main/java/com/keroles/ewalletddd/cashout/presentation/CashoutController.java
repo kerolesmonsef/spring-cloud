@@ -2,7 +2,7 @@ package com.keroles.ewalletddd.cashout.presentation;
 
 import com.keroles.ewalletddd.cashout.application.CashoutApplicationService;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
 import com.keroles.ewalletddd.cashout.presentation.requests.CreateCashoutRequest;
 import com.keroles.ewalletddd.cashout.presentation.responses.CashoutResponse;
@@ -33,7 +33,7 @@ public class CashoutController {
     @ResponseStatus(HttpStatus.CREATED)
     public CashoutResponse request(@RequestBody CreateCashoutRequest request) {
         CashoutId id = cashoutService.requestCashout(
-                new LedgerAccountRef(request.accountId()),
+                new LedgerAccountReference(request.accountReference()),
                 new Money(request.amount(), Currency.of(request.currency())),
                 Rail.valueOf(request.rail().toUpperCase()));
         return CashoutResponse.from(cashoutService.get(id));

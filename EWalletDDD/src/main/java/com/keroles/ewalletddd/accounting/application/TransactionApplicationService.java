@@ -1,7 +1,6 @@
 package com.keroles.ewalletddd.accounting.application;
 
 import com.keroles.ewalletddd.accounting.domain.model.Account;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
@@ -15,18 +14,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
-
-
-
-
-
-
-
-
-
-
+import java.util.List;
 
 @Service
 public class TransactionApplicationService {
@@ -44,8 +32,8 @@ public class TransactionApplicationService {
     }
 
     @Transactional
-    public TransactionId topup(AccountId userAccountId, Money amount) {
-        Account user = loadAccount(userAccountId);
+    public TransactionId topup(AccountReference userAccountRef, Money amount) {
+        Account user = loadAccount(userAccountRef);
         Account system = loadSystemAccount(user.currency());
         system.withdraw(amount);
         user.deposit(amount);
@@ -62,9 +50,9 @@ public class TransactionApplicationService {
 
     
     @Transactional
-    public TransactionId transfer(AccountId fromId, AccountId toId, Money amount) {
-        Account fromAccount = loadAccount(fromId);
-        Account toAccount = loadAccount(toId); 
+    public TransactionId transfer(AccountReference fromRef, AccountReference toRef, Money amount) {
+        Account fromAccount = loadAccount(fromRef);
+        Account toAccount = loadAccount(toRef);
         fromAccount.hold(amount);
 
         Transaction holdTransaction = Transaction.start(Transaction.Type.TRANSFER, partyOf(fromAccount), partyOf(toAccount), amount,
@@ -79,8 +67,8 @@ public class TransactionApplicationService {
 
     
     @Transactional
-    public TransactionId cashout(AccountId userAccountId, Money amount) {
-        Account userAccount = loadAccount(userAccountId);
+    public TransactionId cashout(AccountReference userAccountRef, Money amount) {
+        Account userAccount = loadAccount(userAccountRef);
         Account system = loadSystemAccount(userAccount.currency()); 
         userAccount.hold(amount);
 
@@ -96,31 +84,53 @@ public class TransactionApplicationService {
 
     @Transactional
     public TransactionId settle(TransactionId txId) {
+        return settle(txId, List.of());
+    }
+
+    @Transactional
+    public TransactionId settle(TransactionId txId, List<TransferLegDTO> feeLegs) {
+        Transaction holdTransaction = loadTransaction(txId);
+        return settle(txId, holdTransaction.amount(), feeLegs);
+    }
+
+    @Transactional
+    public TransactionId settle(TransactionId txId, Money receiverCredit, List<TransferLegDTO> feeLegs) {
         Transaction holdTransaction = loadTransaction(txId);
         if (holdTransaction.stage() != Transaction.Stage.HOLD)
             throw new IllegalArgumentException("Cannot settle a " + holdTransaction.type() + " transaction with no pending hold");
-        holdTransaction.complete(); 
+        holdTransaction.complete();
 
         Account sender = resolveParty(holdTransaction.sender());
         Account receiver = resolveParty(holdTransaction.receiver());
-        settleByType(holdTransaction.type(), sender, receiver, holdTransaction.amount());
+        settleByType(holdTransaction.type(), sender, receiver, holdTransaction.amount(), receiverCredit);
 
         Transaction settlementTransaction = Transaction.start(holdTransaction.type(), holdTransaction.sender(), holdTransaction.receiver(), holdTransaction.amount(),
                 Transaction.Stage.SETTLE, holdTransaction.id());
-        settlementTransaction.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, holdTransaction.amount(), receiver.balance());
+        settlementTransaction.addEntry(receiver.id(), Transaction.Entry.Direction.CREDIT, receiverCredit, receiver.balance());
         settlementTransaction.complete();
-        settlementTransaction.addTransfer(sender.id(), receiver.id(), holdTransaction.amount());
+
+        settlementTransaction.addTransfer(sender.id(), receiver.id(), receiverCredit);
+        for (TransferLegDTO leg : feeLegs) {
+            if (leg.amount().isZero()) continue;
+            Account legSender = loadAccount(leg.senderId());
+            Account legReceiver = loadAccount(leg.receiverId());
+            if (leg.senderId().equals(sender.reference())) {
+                legReceiver.deposit(leg.amount());
+                accountRepository.save(legReceiver);
+                publishEvents(legReceiver);
+            }
+            settlementTransaction.addTransfer(legSender.id(), legReceiver.id(), leg.amount());
+        }
 
         saveAll(sender, receiver, holdTransaction, settlementTransaction);
         return settlementTransaction.id();
     }
 
-
-    private void settleByType(Transaction.Type type, Account sender, Account receiver, Money amount) {
+    private void settleByType(Transaction.Type type, Account sender, Account receiver, Money heldAmount, Money receiverCredit) {
         switch (type) {
             case CASHOUT, TRANSFER -> {
-                sender.settle(amount);    
-                receiver.deposit(amount); 
+                sender.settle(heldAmount);
+                receiver.deposit(receiverCredit);
             }
             default -> throw new IllegalArgumentException("No settle handling for " + type);
         }
@@ -157,9 +167,7 @@ public class TransactionApplicationService {
     
     
     private Account resolveParty(Party party) {
-        AccountReference ref = new AccountReference(UUID.fromString(party.reference()));
-        return accountRepository.findByReference(ref)
-                .orElseThrow(() -> new IllegalArgumentException("No account for party: " + party.reference()));
+        return loadAccount(new AccountReference(party.reference()));
     }
 
     private Account loadSystemAccount(Currency currency) {
@@ -181,9 +189,9 @@ public class TransactionApplicationService {
     }
 
 
-    private Account loadAccount(AccountId id) {
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("No account " + id.value()));
+    private Account loadAccount(AccountReference reference) {
+        return accountRepository.findByReference(reference)
+                .orElseThrow(() -> new IllegalArgumentException("No account " + reference.value()));
     }
 
     private Transaction loadTransaction(TransactionId id) {

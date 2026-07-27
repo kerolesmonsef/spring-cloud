@@ -37,6 +37,10 @@ public record Money(BigDecimal amount, Currency currency) {
         return amount.compareTo(other.amount) < 0;
     }
 
+    public boolean isZero() {
+        return amount.signum() == 0;
+    }
+
     private void assertSameCurrency(Money other) {
         if (!currency.equals(other.currency))
             throw new IllegalArgumentException("Currency mismatch: " + currency + " vs " + other.currency);

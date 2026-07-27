@@ -26,8 +26,8 @@ public class CashoutRequestJpaEntity {
     @JdbcTypeCode(SqlTypes.CHAR)   
     private UUID id;
 
-    @Column(nullable = false)
-    private Long accountRef;
+    @Column(nullable = false, length = 36)
+    private String accountRef;
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;

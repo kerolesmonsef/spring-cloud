@@ -5,7 +5,7 @@ import com.keroles.ewalletddd.topup.domain.port.LedgerTopupPort;
 import com.keroles.ewalletddd.topup.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.topup.domain.port.TopupRailRegistry;
 import com.keroles.ewalletddd.topup.domain.repository.TopupRepository;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
 import com.keroles.ewalletddd.shared.domain.Money;
@@ -33,7 +33,7 @@ public class TopupApplicationService {
 
     
     @Transactional
-    public TopupId requestTopup(LedgerAccountRef account, Money amount, Rail rail) {
+    public TopupId requestTopup(LedgerAccountReference account, Money amount, Rail rail) {
         TopupRequest topup = TopupRequest.request(account, amount, rail); 
         
         

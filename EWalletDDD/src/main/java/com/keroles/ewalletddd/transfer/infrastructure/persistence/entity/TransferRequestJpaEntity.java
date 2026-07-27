@@ -26,11 +26,11 @@ public class TransferRequestJpaEntity {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID id;
 
-    @Column(nullable = false)
-    private Long fromAccountRef;
+    @Column(nullable = false, length = 36)
+    private String fromAccountRef;
 
-    @Column(nullable = false)
-    private Long toAccountRef;
+    @Column(nullable = false, length = 36)
+    private String toAccountRef;
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;

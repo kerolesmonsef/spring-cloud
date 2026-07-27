@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.transfer.domain.model;
 
 import com.keroles.ewalletddd.transfer.domain.event.TransferCompletedEvent;
-import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerHoldRef;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.shared.domain.Money;
@@ -16,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransferTest {
 
-    private final LedgerAccountRef from = new LedgerAccountRef(1L);
-    private final LedgerAccountRef to = new LedgerAccountRef(2L);
+    private final LedgerAccountReference from = new LedgerAccountReference("1");
+    private final LedgerAccountReference to = new LedgerAccountReference("2");
     private final LedgerHoldRef holdRef = new LedgerHoldRef(UUID.randomUUID());
     private final LedgerSettleRef settleRef = new LedgerSettleRef(UUID.randomUUID());
     private final Money amount = Money.of("50.00", "AED");

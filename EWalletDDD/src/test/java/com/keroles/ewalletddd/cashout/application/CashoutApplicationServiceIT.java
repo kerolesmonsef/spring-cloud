@@ -4,10 +4,12 @@ import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.repository.TransactionRepository;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
+import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.cashout.domain.model.CashoutRequest;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
 import com.keroles.ewalletddd.shared.domain.Money;
 import lombok.RequiredArgsConstructor;
@@ -27,80 +29,88 @@ class CashoutApplicationServiceIT {
     private final CashoutApplicationService cashoutService;
     private final AccountApplicationService accountService;
     private final TransactionApplicationService transactionService;
+    private final TransactionRepository transactionRepository;
 
     private final Currency AED = Currency.of("AED");
 
-    private LedgerAccountRef fundedAccount(String amount) {
-        AccountId id = accountService.openAccount(null, AED); 
-        transactionService.topup(id, Money.of(amount, "AED"));
-        return new LedgerAccountRef(id.value());
+    private LedgerAccountReference fundedAccount(String amount) {
+        AccountReference ref = accountService.openAccount(null, AED);
+        transactionService.topup(ref, Money.of(amount, "AED"));
+        return new LedgerAccountReference(ref.value());
     }
 
-    private Account ledger(LedgerAccountRef ref) {
-        return accountService.getAccount(new AccountId(ref.value()));
+    private Account ledger(LedgerAccountReference ref) {
+        return accountService.getAccount(new AccountReference(ref.value()));
     }
 
     @Test
     void requestPlacesHold_thenConfirmSettles() {
-        LedgerAccountRef acc = fundedAccount("100.00");
+        LedgerAccountReference acc = fundedAccount("100.00");
 
         CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.AANI);
 
         Account held = ledger(acc);
-        assertEquals(Money.of("60.00", "AED"), held.balance());      
-        assertEquals(Money.of("40.00", "AED"), held.holdBalance());  
+        assertEquals(Money.of("60.00", "AED"), held.balance());
+        assertEquals(Money.of("40.00", "AED"), held.holdBalance());
         assertEquals(CashoutRequest.Status.DISPATCHED, cashoutService.get(id).status());
 
         cashoutService.confirm(id);
 
         Account settled = ledger(acc);
         assertEquals(Money.of("60.00", "AED"), settled.balance());
-        assertEquals(Money.zero(AED), settled.holdBalance());        
+        assertEquals(Money.zero(AED), settled.holdBalance());
         assertEquals(CashoutRequest.Status.CONFIRMED, cashoutService.get(id).status());
+
+        var settleRef = cashoutService.get(id).settleReference();
+        var settlement = transactionRepository.findById(new TransactionId(settleRef.value())).orElseThrow();
+        assertEquals(1, settlement.transfers().size());
+        var leg = settlement.transfers().get(0);
+        assertEquals(Money.of("40.00", "AED"), leg.amount());
+        assertEquals(ledger(acc).id(), leg.senderId());
     }
 
     @Test
     void failReleasesHoldBackToMain() {
-        LedgerAccountRef acc = fundedAccount("100.00");
+        LedgerAccountReference acc = fundedAccount("100.00");
 
         CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.LULU);
         cashoutService.fail(id);
 
         Account released = ledger(acc);
-        assertEquals(Money.of("100.00", "AED"), released.balance()); 
+        assertEquals(Money.of("100.00", "AED"), released.balance());
         assertEquals(Money.zero(AED), released.holdBalance());
         assertEquals(CashoutRequest.Status.FAILED, cashoutService.get(id).status());
     }
 
     @Test
     void doubleConfirmIsRejected_holdSettledOnce() {
-        LedgerAccountRef acc = fundedAccount("100.00");
-        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.LULU); 
+        LedgerAccountReference acc = fundedAccount("100.00");
+        CashoutId id = cashoutService.requestCashout(acc, Money.of("30.00", "AED"), Rail.LULU);
         cashoutService.confirm(id);
 
         assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
-        assertEquals(Money.zero(AED), ledger(acc).holdBalance());    
+        assertEquals(Money.zero(AED), ledger(acc).holdBalance());
     }
 
     @Test
     void syncRailConfirmsAtDispatch_noCallbackNeeded() {
-        LedgerAccountRef acc = fundedAccount("100.00");
+        LedgerAccountReference acc = fundedAccount("100.00");
 
         CashoutId id = cashoutService.requestCashout(acc, Money.of("40.00", "AED"), Rail.MBANK);
 
-        
+
         Account after = ledger(acc);
         assertEquals(Money.of("60.00", "AED"), after.balance());
-        assertEquals(Money.zero(AED), after.holdBalance());          
+        assertEquals(Money.zero(AED), after.holdBalance());
         assertEquals(CashoutRequest.Status.CONFIRMED, cashoutService.get(id).status());
 
-        
+
         assertThrows(IllegalStateException.class, () -> cashoutService.confirm(id));
     }
 
     @Test
     void cannotCashoutMoreThanBalance() {
-        LedgerAccountRef acc = fundedAccount("10.00");
+        LedgerAccountReference acc = fundedAccount("10.00");
         assertThrows(InsufficientBalanceException.class,
                 () -> cashoutService.requestCashout(acc, Money.of("10.01", "AED"), Rail.AANI));
     }

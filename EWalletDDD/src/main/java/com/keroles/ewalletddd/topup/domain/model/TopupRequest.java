@@ -5,7 +5,7 @@ import com.keroles.ewalletddd.topup.domain.event.TopupDispatchedEvent;
 import com.keroles.ewalletddd.topup.domain.event.TopupFailedEvent;
 import com.keroles.ewalletddd.topup.domain.event.TopupRequestedEvent;
 import com.keroles.ewalletddd.topup.domain.exception.IllegalTopupStateException;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
@@ -26,7 +26,7 @@ public class TopupRequest {
     public enum Status { PENDING, COMPLETED, FAILED }
 
     private final TopupId id;
-    private final LedgerAccountRef account;
+    private final LedgerAccountReference account;
     private final Money amount;
     private final Rail rail;
     private final Instant createdAt;
@@ -35,7 +35,7 @@ public class TopupRequest {
     private LedgerTransactionRef ledgerTransactionRef; 
     private final List<Object> events = new ArrayList<>();
 
-    private TopupRequest(TopupId id, LedgerAccountRef account, Money amount, Rail rail, Status status,
+    private TopupRequest(TopupId id, LedgerAccountReference account, Money amount, Rail rail, Status status,
                          String railReference, LedgerTransactionRef ledgerTransactionRef, Instant createdAt) {
         this.id = id;
         this.account = account;
@@ -47,14 +47,14 @@ public class TopupRequest {
         this.createdAt = createdAt;
     }
 
-    public static TopupRequest request(LedgerAccountRef account, Money amount, Rail rail) {
+    public static TopupRequest request(LedgerAccountReference account, Money amount, Rail rail) {
         TopupRequest t = new TopupRequest(TopupId.newId(), account, amount, rail,
                 Status.PENDING, null, null, Instant.now());
         t.events.add(new TopupRequestedEvent(t.id, account, amount, rail));
         return t;
     }
 
-    public static TopupRequest restore(TopupId id, LedgerAccountRef account, Money amount, Rail rail, Status status,
+    public static TopupRequest restore(TopupId id, LedgerAccountReference account, Money amount, Rail rail, Status status,
                                        String railReference, LedgerTransactionRef ledgerTransactionRef, Instant createdAt) {
         return new TopupRequest(id, account, amount, rail, status, railReference, ledgerTransactionRef, createdAt);
     }
@@ -92,7 +92,7 @@ public class TopupRequest {
     }
 
     public TopupId id() { return id; }
-    public LedgerAccountRef account() { return account; }
+    public LedgerAccountReference account() { return account; }
     public Money amount() { return amount; }
     public Rail rail() { return rail; }
     public Status status() { return status; }

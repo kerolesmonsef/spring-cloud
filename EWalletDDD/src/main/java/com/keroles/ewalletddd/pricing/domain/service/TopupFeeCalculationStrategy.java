@@ -19,6 +19,6 @@ final class TopupFeeCalculationStrategy implements FeeCalculationStrategy {
         Money senderTotalAmount = amount.add(senderFeeValue).add(senderVatValue);
         Money receiverTotalAmount = amount.subtract(receiverFeeValue).subtract(receiverVatValue);
 
-        return new FeeCalculationResult(senderTotalAmount, receiverTotalAmount, senderFeeValue, receiverFeeValue, senderVatValue, receiverVatValue);
+        return new FeeCalculationResult(senderTotalAmount, receiverTotalAmount, amount, senderFeeValue, receiverFeeValue, senderVatValue, receiverVatValue);
     }
 }

@@ -30,7 +30,7 @@ public class CashoutApplicationService {
     }
 
     @Transactional
-    public CashoutId requestCashout(LedgerAccountRef account, Money amount, Rail rail) {
+    public CashoutId requestCashout(LedgerAccountReference account, Money amount, Rail rail) {
         LedgerReservationRef reservation = ledger.reserve(account, amount); 
         CashoutRequest cashout = CashoutRequest.request(account, amount, rail, reservation);
         

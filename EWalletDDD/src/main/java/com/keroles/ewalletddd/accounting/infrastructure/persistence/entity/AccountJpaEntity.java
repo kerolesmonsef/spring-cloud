@@ -15,11 +15,8 @@ import com.keroles.ewalletddd.accounting.infrastructure.reference.CurrencyJpaEnt
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Entity
 @Table(name = "a_accounts")
@@ -32,9 +29,8 @@ public class AccountJpaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JdbcTypeCode(SqlTypes.CHAR)   
     @Column(nullable = false, unique = true, updatable = false, length = 36)
-    private UUID accountReference;
+    private String accountReference;
 
     
     @ManyToOne(fetch = FetchType.LAZY)

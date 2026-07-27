@@ -17,7 +17,7 @@ public class CashoutRequest {
     public enum Status { RESERVED, DISPATCHED, CONFIRMED, FAILED }
 
     private final CashoutId id;
-    private final LedgerAccountRef account;
+    private final LedgerAccountReference account;
     private final Money amount;
     private final Rail rail;
     private final LedgerReservationRef reservationRef; 
@@ -27,7 +27,7 @@ public class CashoutRequest {
     private LedgerSettleRef settleReference; 
     private final List<Object> events = new ArrayList<>();
 
-    private CashoutRequest(CashoutId id, LedgerAccountRef account, Money amount, Rail rail,
+    private CashoutRequest(CashoutId id, LedgerAccountReference account, Money amount, Rail rail,
                            LedgerReservationRef reservationRef, Status status, String railReference, Instant createdAt) {
         this.id = id;
         this.account = account;
@@ -40,16 +40,19 @@ public class CashoutRequest {
     }
 
     
-    public static CashoutRequest request(LedgerAccountRef account, Money amount, Rail rail, LedgerReservationRef reservationRef) {
+    public static CashoutRequest request(LedgerAccountReference account, Money amount, Rail rail, LedgerReservationRef reservationRef) {
         CashoutRequest c = new CashoutRequest(CashoutId.newId(), account, amount, rail,
                 reservationRef, Status.RESERVED, null, Instant.now());
         c.events.add(new CashoutRequestedEvent(c.id, account, amount, rail));
         return c;
     }
 
-    public static CashoutRequest restore(CashoutId id, LedgerAccountRef account, Money amount, Rail rail,
-                                         LedgerReservationRef reservationRef, Status status, String railReference, Instant createdAt) {
-        return new CashoutRequest(id, account, amount, rail, reservationRef, status, railReference, createdAt);
+    public static CashoutRequest restore(CashoutId id, LedgerAccountReference account, Money amount, Rail rail,
+                                         LedgerReservationRef reservationRef, Status status, String railReference,
+                                         Instant createdAt, LedgerSettleRef settleReference) {
+        CashoutRequest c = new CashoutRequest(id, account, amount, rail, reservationRef, status, railReference, createdAt);
+        c.settleReference = settleReference;
+        return c;
     }
 
     public void markDispatched(String railReference) {
@@ -86,7 +89,7 @@ public class CashoutRequest {
     }
 
     public CashoutId id() { return id; }
-    public LedgerAccountRef account() { return account; }
+    public LedgerAccountReference account() { return account; }
     public Money amount() { return amount; }
     public Rail rail() { return rail; }
     public LedgerReservationRef reservationRef() { return reservationRef; }

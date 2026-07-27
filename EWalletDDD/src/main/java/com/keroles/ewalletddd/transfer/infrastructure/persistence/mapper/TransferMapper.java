@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.transfer.infrastructure.persistence.mapper;
 
 import com.keroles.ewalletddd.transfer.domain.model.Transfer;
-import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerHoldRef;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.transfer.domain.valueObject.TransferId;
@@ -17,8 +17,8 @@ public final class TransferMapper {
         Currency currency = Currency.of(row.getCurrency());
         return Transfer.restore(
                 new TransferId(row.getId()),
-                new LedgerAccountRef(row.getFromAccountRef()),
-                new LedgerAccountRef(row.getToAccountRef()),
+                new LedgerAccountReference(row.getFromAccountRef()),
+                new LedgerAccountReference(row.getToAccountRef()),
                 new Money(row.getAmount(), currency),
                 new LedgerHoldRef(row.getLedgerHoldRef()),
                 new LedgerSettleRef(row.getLedgerSettleRef()),

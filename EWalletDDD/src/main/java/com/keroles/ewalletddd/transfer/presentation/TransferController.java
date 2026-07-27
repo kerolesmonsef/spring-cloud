@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.transfer.presentation;
 
 import com.keroles.ewalletddd.transfer.application.TransferApplicationService;
-import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.transfer.domain.valueObject.TransferId;
 import com.keroles.ewalletddd.transfer.presentation.requests.CreateTransferRequest;
 import com.keroles.ewalletddd.transfer.presentation.responses.TransferResponse;
@@ -32,8 +32,8 @@ public class TransferController {
     @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse request(@RequestBody CreateTransferRequest request) {
         TransferId id = transferService.requestTransfer(
-                new LedgerAccountRef(request.fromAccountId()),
-                new LedgerAccountRef(request.toAccountId()),
+                new LedgerAccountReference(request.fromAccountReference()),
+                new LedgerAccountReference(request.toAccountReference()),
                 new Money(request.amount(), Currency.of(request.currency())));
         return TransferResponse.from(transferService.get(id));
     }

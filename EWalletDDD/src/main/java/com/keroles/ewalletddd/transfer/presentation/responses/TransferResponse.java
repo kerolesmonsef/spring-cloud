@@ -4,7 +4,7 @@ import com.keroles.ewalletddd.transfer.domain.model.Transfer;
 
 import java.math.BigDecimal;
 
-public record TransferResponse(String id, Long fromAccountRef, Long toAccountRef, BigDecimal amount, String currency,
+public record TransferResponse(String id, String fromAccountRef, String toAccountRef, BigDecimal amount, String currency,
                                String holdRef, String settleRef) {
     public static TransferResponse from(Transfer t) {
         return new TransferResponse(

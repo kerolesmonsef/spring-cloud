@@ -1,5 +1,6 @@
 package com.keroles.ewalletddd.accounting.infrastructure.reference;
 
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.AccountJpaEntity;
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.entity.UserJpaEntity;
 import com.keroles.ewalletddd.accounting.infrastructure.persistence.repository.SpringDataAccountJpa;
@@ -14,17 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
-
 
 @Component
 public class ReferenceDataSeeder implements CommandLineRunner {
-
-    
-    
     private static final BigDecimal SYSTEM_ACCOUNT_SEED = new BigDecimal("1000000000");
     private static final String SYSTEM_TYPE = "system";
-
     private final AccountTypeRepository accountTypes;
     private final CurrencyRepository currencies;
     private final SpringDataAccountJpa accounts;
@@ -46,12 +41,13 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         this.defaultCurrency = defaultCurrency;
     }
 
-    
     @Override
     @Transactional
     public void run(String... args) {
         AccountTypeJpaEntity systemType = seedType(SYSTEM_TYPE);
         seedType("user");
+        AccountTypeJpaEntity feeType = seedType("fee");
+        AccountTypeJpaEntity vatType = seedType("vat");
 
         List<String> supported = List.of(defaultCurrency, "ETH", "SOL", "BTC");
         UserJpaEntity systemUser = systemUser();
@@ -60,14 +56,17 @@ public class ReferenceDataSeeder implements CommandLineRunner {
             ensureSystemAccount(systemType, currency, systemUser);
         }
 
+        CurrencyJpaEntity defaultCurrencyRow = seedCurrency(defaultCurrency);
+        ensureStaticAccount(AccountReference.FEE, "fee", feeType, defaultCurrencyRow, systemUser);
+        ensureStaticAccount(AccountReference.VAT, "vat", vatType, defaultCurrencyRow, systemUser);
+
         seedFeeCharge("TOPUP", new BigDecimal("1.50"), "PERCENTAGE", new BigDecimal("1.00"), "VALUE", new BigDecimal("5.00"));
         seedFeeCharge("CASHOUT", new BigDecimal("5.00"), "VALUE", new BigDecimal("0.50"), "PERCENTAGE", new BigDecimal("5.00"));
         seedFeeCharge("TRANSFER", new BigDecimal("1.00"), "PERCENTAGE", new BigDecimal("0.00"), "VALUE", new BigDecimal("5.00"));
     }
 
-
     private void seedFeeCharge(String transactionType, BigDecimal senderFee, String senderFeeType,
-                                BigDecimal receiverFee, String receiverFeeType, BigDecimal vatPercentage) {
+                               BigDecimal receiverFee, String receiverFeeType, BigDecimal vatPercentage) {
         if (feeCharges.existsByTransactionType(transactionType)) return;
         FeeChargeJpaEntity row = new FeeChargeJpaEntity();
         row.setTransactionType(transactionType);
@@ -80,11 +79,10 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         feeCharges.save(row);
     }
 
-    
     private void ensureSystemAccount(AccountTypeJpaEntity systemType, CurrencyJpaEntity currency, UserJpaEntity owner) {
         if (accounts.existsByAccountTypeAndCurrency(SYSTEM_TYPE, currency.getCode())) return;
         AccountJpaEntity row = new AccountJpaEntity();
-        row.setAccountReference(UUID.randomUUID());
+        row.setAccountReference(AccountReference.newRef().value());
         row.setUser(owner);
         row.setCurrency(currency.getCode());
         row.setCurrencyRef(currency);
@@ -95,7 +93,20 @@ public class ReferenceDataSeeder implements CommandLineRunner {
         accounts.save(row);
     }
 
-    
+    private void ensureStaticAccount(AccountReference ref, String accountType, AccountTypeJpaEntity typeRef, CurrencyJpaEntity currency, UserJpaEntity owner) {
+        if (accounts.existsByAccountReference(ref.value())) return;
+        AccountJpaEntity row = new AccountJpaEntity();
+        row.setAccountReference(ref.value());
+        row.setUser(owner);
+        row.setCurrency(currency.getCode());
+        row.setCurrencyRef(currency);
+        row.setAccountType(accountType);
+        row.setAccountTypeRef(typeRef);
+        row.setBalance(BigDecimal.ZERO);
+        row.setHoldBalance(BigDecimal.ZERO);
+        accounts.save(row);
+    }
+
     private UserJpaEntity systemUser() {
         return accounts.findFirstByAccountType(SYSTEM_TYPE)
                 .map(a -> users.getReferenceById(a.getUserId()))
@@ -103,11 +114,13 @@ public class ReferenceDataSeeder implements CommandLineRunner {
     }
 
     private AccountTypeJpaEntity seedType(String name) {
-        return accountTypes.findByName(name).orElseGet(() -> accountTypes.save(new AccountTypeJpaEntity(name)));
+        return accountTypes.findByName(name)
+                .orElseGet(() -> accountTypes.save(new AccountTypeJpaEntity(name)));
     }
 
     private CurrencyJpaEntity seedCurrency(String code) {
-        return currencies.findByCode(code).orElseGet(() -> currencies.save(new CurrencyJpaEntity(code)));
+        return currencies.findByCode(code)
+                .orElseGet(() -> currencies.save(new CurrencyJpaEntity(code)));
     }
 }
 

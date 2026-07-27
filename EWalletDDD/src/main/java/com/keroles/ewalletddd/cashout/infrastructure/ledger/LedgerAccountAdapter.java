@@ -1,10 +1,10 @@
 package com.keroles.ewalletddd.cashout.infrastructure.ledger;
 
 import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
 import com.keroles.ewalletddd.cashout.domain.port.LedgerAccountPort;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.shared.domain.Money;
@@ -20,9 +20,9 @@ public class LedgerAccountAdapter implements LedgerAccountPort {
     }
 
     @Override
-    public LedgerReservationRef reserve(LedgerAccountRef account, Money amount) {
+    public LedgerReservationRef reserve(LedgerAccountReference account, Money amount) {
         
-        TransactionId tx = ledger.cashout(new AccountId(account.value()), amount);
+        TransactionId tx = ledger.cashout(new AccountReference(account.value()), amount);
         return new LedgerReservationRef(tx.value());
     }
 

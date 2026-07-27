@@ -4,7 +4,7 @@ import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.model.Transaction;
 import com.keroles.ewalletddd.accounting.domain.repository.AccountRepository;
 import com.keroles.ewalletddd.accounting.domain.repository.TransactionRepository;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountType;
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
 import com.keroles.ewalletddd.accounting.domain.valueObject.TransactionId;
@@ -30,13 +30,13 @@ class AccountApplicationServiceIT {
 
     private final Currency AED = Currency.of("AED");
 
-    private AccountId fundedAccount(String amount) {
-        AccountId id = accountApplicationService.openAccount(null, AED); 
-        transactionApplicationService.topup(id, Money.of(amount, "AED"));
-        return id;
+    private AccountReference fundedAccount(String amount) {
+        AccountReference ref = accountApplicationService.openAccount(null, AED);
+        transactionApplicationService.topup(ref, Money.of(amount, "AED"));
+        return ref;
     }
 
-    
+
     private Money systemBalance() {
         return accountRepository.findByTypeAndCurrency(AccountType.SYSTEM, AED)
                 .orElseThrow().balance();
@@ -44,13 +44,13 @@ class AccountApplicationServiceIT {
 
     @Test
     void savingLoadedAccountUpdatesInsteadOfInserting() {
-        AccountId accountId = accountApplicationService.openAccount(null, AED);
-        UserId user = accountApplicationService.getAccount(accountId).userId();
-        transactionApplicationService.topup(accountId, Money.of("100.00", "AED"));
-        transactionApplicationService.topup(accountId, Money.of("50.00", "AED"));
+        AccountReference accountRef = accountApplicationService.openAccount(null, AED);
+        UserId user = accountApplicationService.getAccount(accountRef).userId();
+        transactionApplicationService.topup(accountRef, Money.of("100.00", "AED"));
+        transactionApplicationService.topup(accountRef, Money.of("50.00", "AED"));
 
-        assertEquals(1, accountApplicationService.getUserAccounts(user).size()); 
-        assertEquals(Money.of("150.00", "AED"), accountApplicationService.getAccount(accountId).balance());
+        assertEquals(1, accountApplicationService.getUserAccounts(user).size());
+        assertEquals(Money.of("150.00", "AED"), accountApplicationService.getAccount(accountRef).balance());
     }
 
     @Test
@@ -61,70 +61,70 @@ class AccountApplicationServiceIT {
 
     @Test
     void reserveThenSettle_holdGoesToZero() {
-        AccountId id = fundedAccount("100.00");
+        AccountReference ref = fundedAccount("100.00");
         Money systemBefore = systemBalance();
-        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.cashout(ref, Money.of("40.00", "AED"));
 
         transactionApplicationService.settle(txId);
 
-        Account account = accountApplicationService.getAccount(id);
+        Account account = accountApplicationService.getAccount(ref);
         assertEquals(Money.of("60.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
-        assertEquals(systemBefore.add(Money.of("40.00", "AED")), systemBalance()); 
+        assertEquals(systemBefore.add(Money.of("40.00", "AED")), systemBalance());
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size());
     }
 
     @Test
     void reserveThenRelease_moneyBackToMain() {
-        AccountId id = fundedAccount("100.00");
+        AccountReference ref = fundedAccount("100.00");
         Money systemBefore = systemBalance();
-        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
+        TransactionId txId = transactionApplicationService.cashout(ref, Money.of("40.00", "AED"));
 
         transactionApplicationService.release(txId);
 
-        Account account = accountApplicationService.getAccount(id);
+        Account account = accountApplicationService.getAccount(ref);
         assertEquals(Money.of("100.00", "AED"), account.balance());
         assertEquals(Money.zero(AED), account.holdBalance());
-        assertEquals(systemBefore, systemBalance()); 
+        assertEquals(systemBefore, systemBalance());
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size());
     }
 
     @Test
     void duplicateSettleIsRejected_idempotencyGuard() {
-        AccountId id = fundedAccount("100.00");
-        TransactionId txId = transactionApplicationService.cashout(id, Money.of("40.00", "AED"));
+        AccountReference ref = fundedAccount("100.00");
+        TransactionId txId = transactionApplicationService.cashout(ref, Money.of("40.00", "AED"));
         transactionApplicationService.settle(txId);
 
         assertThrows(IllegalStateException.class, () -> transactionApplicationService.settle(txId));
-        assertEquals(Money.zero(AED), accountApplicationService.getAccount(id).holdBalance()); 
+        assertEquals(Money.zero(AED), accountApplicationService.getAccount(ref).holdBalance());
     }
 
     @Test
     void cannotReserveMoreThanBalance() {
-        AccountId id = fundedAccount("10.00");
+        AccountReference ref = fundedAccount("10.00");
         assertThrows(InsufficientBalanceException.class,
-                () -> transactionApplicationService.cashout(id, Money.of("10.01", "AED")));
+                () -> transactionApplicationService.cashout(ref, Money.of("10.01", "AED")));
     }
 
     @Test
     void transferHoldsFromSenderAndLeavesReceiverUntouched() {
-        AccountId from = fundedAccount("100.00");
-        AccountId to = accountApplicationService.openAccount(null, AED);
+        AccountReference from = fundedAccount("100.00");
+        AccountReference to = accountApplicationService.openAccount(null, AED);
 
         TransactionId txId = transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
         assertEquals(Money.of("70.00", "AED"), accountApplicationService.getAccount(from).balance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(to).balance());
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size());
     }
 
     @Test
     void transferSettleMovesHeldMoneyToReceiver() {
-        AccountId from = fundedAccount("100.00");
-        AccountId to = accountApplicationService.openAccount(null, AED);
+        AccountReference from = fundedAccount("100.00");
+        AccountReference to = accountApplicationService.openAccount(null, AED);
         TransactionId txId = transactionApplicationService.transfer(from, to, Money.of("30.00", "AED"));
 
         TransactionId settlementId = transactionApplicationService.settle(txId);
@@ -133,33 +133,33 @@ class AccountApplicationServiceIT {
         assertEquals(Money.zero(AED), accountApplicationService.getAccount(from).holdBalance());
         assertEquals(Money.of("30.00", "AED"), accountApplicationService.getAccount(to).balance());
 
-        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size()); 
+        assertEquals(0, transactionRepository.findById(txId).orElseThrow().transfers().size());
         var transfers = transactionRepository.findById(settlementId).orElseThrow().transfers();
         assertEquals(1, transfers.size());
         Transaction.Transfer transfer = transfers.get(0);
-        assertEquals(from, transfer.senderId());
-        assertEquals(to, transfer.receiverId());
+        assertEquals(accountApplicationService.getAccount(from).id(), transfer.senderId());
+        assertEquals(accountApplicationService.getAccount(to).id(), transfer.receiverId());
         assertEquals(Money.of("30.00", "AED"), transfer.amount());
     }
 
     @Test
     void topupWritesATransferRowFromSystemToUser() {
-        AccountId id = accountApplicationService.openAccount(null, AED);
+        AccountReference ref = accountApplicationService.openAccount(null, AED);
         Money systemBefore = systemBalance();
 
-        TransactionId txId = transactionApplicationService.topup(id, Money.of("100.00", "AED"));
+        TransactionId txId = transactionApplicationService.topup(ref, Money.of("100.00", "AED"));
 
         var transfers = transactionRepository.findById(txId).orElseThrow().transfers();
         assertEquals(1, transfers.size());
         Transaction.Transfer transfer = transfers.get(0);
-        assertEquals(id, transfer.receiverId());
+        assertEquals(accountApplicationService.getAccount(ref).id(), transfer.receiverId());
         assertEquals(Money.of("100.00", "AED"), transfer.amount());
         assertEquals(systemBalance(), systemBefore.subtract(Money.of("100.00", "AED")));
     }
 
     @Test
     void onlyOneAccountPerUserPerCurrency() {
-        AccountId first = accountApplicationService.openAccount(null, AED);
+        AccountReference first = accountApplicationService.openAccount(null, AED);
         UserId user = accountApplicationService.getAccount(first).userId();
         assertThrows(IllegalStateException.class, () -> accountApplicationService.openAccount(user, AED));
     }

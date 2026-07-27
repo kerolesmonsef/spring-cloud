@@ -1,7 +1,7 @@
 package com.keroles.ewalletddd.transfer.domain.model;
 
 import com.keroles.ewalletddd.transfer.domain.event.TransferCompletedEvent;
-import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerHoldRef;
 import com.keroles.ewalletddd.transfer.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.transfer.domain.valueObject.TransferId;
@@ -14,15 +14,15 @@ import java.util.List;
 public class Transfer {
 
     private final TransferId id;
-    private final LedgerAccountRef fromAccount;
-    private final LedgerAccountRef toAccount;
+    private final LedgerAccountReference fromAccount;
+    private final LedgerAccountReference toAccount;
     private final Money amount;
     private final LedgerHoldRef holdRef;
     private final LedgerSettleRef settleRef;
     private final Instant createdAt;
     private final List<Object> events = new ArrayList<>();
 
-    private Transfer(TransferId id, LedgerAccountRef fromAccount, LedgerAccountRef toAccount, Money amount,
+    private Transfer(TransferId id, LedgerAccountReference fromAccount, LedgerAccountReference toAccount, Money amount,
                      LedgerHoldRef holdRef, LedgerSettleRef settleRef, Instant createdAt) {
         this.id = id;
         this.fromAccount = fromAccount;
@@ -33,14 +33,14 @@ public class Transfer {
         this.createdAt = createdAt;
     }
 
-    public static Transfer complete(LedgerAccountRef fromAccount, LedgerAccountRef toAccount, Money amount,
+    public static Transfer complete(LedgerAccountReference fromAccount, LedgerAccountReference toAccount, Money amount,
                                     LedgerHoldRef holdRef, LedgerSettleRef settleRef) {
         Transfer t = new Transfer(TransferId.newId(), fromAccount, toAccount, amount, holdRef, settleRef, Instant.now());
         t.events.add(new TransferCompletedEvent(t.id, fromAccount, toAccount, amount));
         return t;
     }
 
-    public static Transfer restore(TransferId id, LedgerAccountRef fromAccount, LedgerAccountRef toAccount, Money amount,
+    public static Transfer restore(TransferId id, LedgerAccountReference fromAccount, LedgerAccountReference toAccount, Money amount,
                                    LedgerHoldRef holdRef, LedgerSettleRef settleRef, Instant createdAt) {
         return new Transfer(id, fromAccount, toAccount, amount, holdRef, settleRef, createdAt);
     }
@@ -52,8 +52,8 @@ public class Transfer {
     }
 
     public TransferId id() { return id; }
-    public LedgerAccountRef fromAccount() { return fromAccount; }
-    public LedgerAccountRef toAccount() { return toAccount; }
+    public LedgerAccountReference fromAccount() { return fromAccount; }
+    public LedgerAccountReference toAccount() { return toAccount; }
     public Money amount() { return amount; }
     public LedgerHoldRef holdRef() { return holdRef; }
     public LedgerSettleRef settleRef() { return settleRef; }

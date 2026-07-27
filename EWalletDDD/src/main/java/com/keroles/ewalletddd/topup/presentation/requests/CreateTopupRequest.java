@@ -3,4 +3,4 @@ package com.keroles.ewalletddd.topup.presentation.requests;
 import java.math.BigDecimal;
 
 
-public record CreateTopupRequest(Long accountId, BigDecimal amount, String currency, String rail) {}
+public record CreateTopupRequest(String accountReference, BigDecimal amount, String currency, String rail) {}

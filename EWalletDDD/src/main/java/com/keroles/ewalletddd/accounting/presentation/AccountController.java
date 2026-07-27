@@ -4,6 +4,7 @@ import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
 import com.keroles.ewalletddd.accounting.domain.model.Account;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
+import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
 import com.keroles.ewalletddd.accounting.presentation.requests.MoneyRequest;
 import com.keroles.ewalletddd.accounting.presentation.requests.OpenAccountRequest;
 import com.keroles.ewalletddd.accounting.presentation.responses.AccountResponse;
@@ -34,29 +35,15 @@ public class AccountController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public AccountResponse open(@RequestBody OpenAccountRequest request) {
-        AccountId id = accountService.openAccount(
+        AccountReference reference = accountService.openAccount(
                 request.userId() == null ? null : new UserId(request.userId()),
                 Currency.of(request.currency()));
-        return AccountResponse.from(accountService.getAccount(id));
-    }
-
-    @GetMapping("/{id}")
-    public AccountResponse get(@PathVariable Long id) {
-        return AccountResponse.from(accountService.getAccount(new AccountId(id)));
+        return AccountResponse.from(accountService.getAccount(reference));
     }
 
     @GetMapping("/user/{userId}")
     public List<AccountResponse> byUser(@PathVariable Long userId) {
         return accountService.getUserAccounts(new UserId(userId))
                 .stream().map(AccountResponse::from).toList();
-    }
-
-    
-    @PostMapping("/{id}/topup")
-    public AccountResponse topup(@PathVariable Long id, @RequestBody MoneyRequest request) {
-        AccountId accountId = new AccountId(id);
-        Account account = accountService.getAccount(accountId);
-        transactionService.topup(accountId, new Money(request.amount(), account.currency()));
-        return AccountResponse.from(accountService.getAccount(accountId));
     }
 }

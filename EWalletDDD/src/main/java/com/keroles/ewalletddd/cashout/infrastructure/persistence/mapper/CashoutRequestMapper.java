@@ -2,8 +2,9 @@ package com.keroles.ewalletddd.cashout.infrastructure.persistence.mapper;
 
 import com.keroles.ewalletddd.cashout.domain.model.CashoutRequest;
 import com.keroles.ewalletddd.cashout.domain.valueObject.CashoutId;
-import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerReservationRef;
+import com.keroles.ewalletddd.cashout.domain.valueObject.LedgerSettleRef;
 import com.keroles.ewalletddd.cashout.domain.valueObject.Rail;
 import com.keroles.ewalletddd.cashout.infrastructure.persistence.entity.CashoutRequestJpaEntity;
 import com.keroles.ewalletddd.shared.domain.Currency;
@@ -17,13 +18,14 @@ public final class CashoutRequestMapper {
         Currency currency = Currency.of(row.getCurrency());
         return CashoutRequest.restore(
                 new CashoutId(row.getId()),
-                new LedgerAccountRef(row.getAccountRef()),
+                new LedgerAccountReference(row.getAccountRef()),
                 new Money(row.getAmount(), currency),
                 Rail.valueOf(row.getRail()),
                 new LedgerReservationRef(row.getLedgerReservationRef()),
                 CashoutRequest.Status.valueOf(row.getStatus()),
                 row.getRailReference(),
-                row.getCreatedAt());
+                row.getCreatedAt(),
+                row.getLedgerSettleRef() != null ? new LedgerSettleRef(row.getLedgerSettleRef()) : null);
     }
 
     

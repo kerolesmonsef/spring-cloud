@@ -6,7 +6,7 @@ import com.keroles.ewalletddd.topup.domain.port.RailDispatchResult;
 import com.keroles.ewalletddd.topup.domain.port.TopupRailPort;
 import com.keroles.ewalletddd.topup.domain.port.TopupRailRegistry;
 import com.keroles.ewalletddd.topup.domain.repository.TopupRepository;
-import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountRef;
+import com.keroles.ewalletddd.topup.domain.valueObject.LedgerAccountReference;
 import com.keroles.ewalletddd.topup.domain.valueObject.LedgerTransactionRef;
 import com.keroles.ewalletddd.topup.domain.valueObject.Rail;
 import com.keroles.ewalletddd.topup.domain.valueObject.TopupId;
@@ -34,7 +34,7 @@ class TopupRejectAtDispatchTest {
         TopupApplicationService service =
                 new TopupApplicationService(repo, ledger, rejecting, event -> {});
 
-        TopupId id = service.requestTopup(new LedgerAccountRef(7L), Money.of("25.00", "AED"), Rail.TCS);
+        TopupId id = service.requestTopup(new LedgerAccountReference("7"), Money.of("25.00", "AED"), Rail.TCS);
 
         TopupRequest saved = repo.findById(id).orElseThrow();
         assertEquals(TopupRequest.Status.FAILED, saved.status());
@@ -43,7 +43,7 @@ class TopupRejectAtDispatchTest {
 
     static class RecordingLedger implements LedgerTopupPort {
         boolean credited;
-        public LedgerTransactionRef topup(LedgerAccountRef account, Money amount) {
+        public LedgerTransactionRef topup(LedgerAccountReference account, Money amount) {
             credited = true;
             return new LedgerTransactionRef(UUID.randomUUID());
         }
