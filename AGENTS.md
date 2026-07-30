@@ -69,8 +69,9 @@
 | 8091 | OpenFeign                        | [`OpenFeign/src/main/resources/application.properties`](OpenFeign/src/main/resources/application.properties) |
 | 8761 | ServiceDescovery (Eureka Server) | [`ServiceDescovery/src/main/resources/application.properties`](ServiceDescovery/src/main/resources/application.properties) |
 | 8003 | SSO                              | [`SSO/src/main/resources/application.properties`](SSO/src/main/resources/application.properties) |
+| 8092 | wso2 (backend fronted by WSO2 AM) | [`wso2/src/main/resources/application.properties`](wso2/src/main/resources/application.properties) |
 
-> **Next available port suggestion:** `8003` (for additional back-end instances) or `8092+` (for additional client-facing services).
+> **Next available port suggestion:** `8093+` (for additional client-facing services).
 
 ---
 

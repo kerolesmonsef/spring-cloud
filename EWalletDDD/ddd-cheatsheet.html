@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  ONENOTE COPY-PASTE RULES  (workflow: browser -> copy -> OneNote)
+  ============================================================
+  This file is pasted into OneNote. OneNote STRIPS all CSS on
+  paste (verified: Microsoft Graph docs say "CSS is removed").
+  Only these survive: headings, <b>, <i>, <table>, <ul>/<ol>,
+  and inline font color. So design = structure + bold + color.
+  The <style> below only makes it pretty IN THE BROWSER; it must
+  never be what makes content READABLE. Rules:
+
+  1. LIGHT background + DARK text ALWAYS. OneNote keeps text
+     color but DROPS backgrounds. Light text => invisible.
+  2. NO dark-background blocks (incl. dark table headers).
+     White text on a dropped dark bg = invisible on paste.
+  3. Readability must survive with zero CSS. Use bold + inline
+     color + borders, never rely on background color alone.
+  4. TREES: use a NESTED BULLET LIST (native OneNote outline),
+     NOT box-drawing chars in <pre> (font swap => misalign).
+  5. TABLES paste reliably. Prefer them over ASCII art.
+  6. Alt: paste a SCREENSHOT when it must look exact
+     (pixel-perfect but not editable in OneNote).
+  ============================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EWalletDDD Cheatsheet</title>
+<style>
+  :root {
+    --ink: #0d1b2a;
+    --blue: #1d4ed8;
+    --slate: #334155;
+    --muted: #64748b;
+    --panel: #f1f5f9;
+    --line: #cbd5e1;
+    --core: #b91c1c;
+    --support: #b45309;
+    --generic: #6d28d9;
+    --acl: #0f766e;
+  }
+  body { max-width: 900px; margin: 48px auto; padding: 0 24px;
+    font-family: 'Segoe UI', Arial, sans-serif; color: var(--slate);
+    line-height: 1.65; font-size: 16px; }
+
+  /* Masthead */
+  .eyebrow { font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--blue); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-size: 40px; line-height: 1.1; font-weight: 800; color: var(--ink);
+    margin: 0 0 10px; letter-spacing: -.01em; }
+  .lede { font-size: 17px; color: var(--slate); margin: 0 0 4px; }
+  .lede b { color: var(--ink); }
+  .rule { height: 3px; background: var(--ink); border: 0; margin: 22px 0 8px; }
+
+  /* Section headings — blueprint tick on the left */
+  h2 { font-size: 22px; font-weight: 700; color: var(--ink); margin: 44px 0 14px;
+    padding-left: 14px; border-left: 4px solid var(--blue); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+  th { text-align: left; font-weight: 700; color: var(--ink); font-size: 13px;
+    letter-spacing: .04em; text-transform: uppercase; padding: 10px 14px;
+    background: var(--panel); border-bottom: 2px solid var(--ink); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.k { font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+  /* Yes/No verdict — bold + color so it survives CSS stripping */
+  .yes { color: #15803d; font-weight: 700; }
+  .no  { color: #b45309; font-weight: 700; }
+
+  /* Subdomain tags — colored bold text, readable even naked */
+  .t-core    { color: var(--core);    font-weight: 700; }
+  .t-support { color: var(--support); font-weight: 700; }
+  .t-generic { color: var(--generic); font-weight: 700; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 14px 0 0;
+    padding: 0; list-style: none; font-size: 14px; font-weight: 600; }
+
+  /* Tree as nested outline (OneNote-native bullets) */
+  .tree, .tree ul { list-style: none; margin: 6px 0 0; padding-left: 22px; }
+  .tree > li { margin-top: 4px; }
+  .tree li { margin: 2px 0; }
+  .dir { font-weight: 700; color: var(--ink); }
+  .file { font-family: Consolas, 'Courier New', monospace; font-size: 14px; color: var(--slate); }
+  .why { color: var(--muted); font-style: italic; }
+  .port { color: var(--blue); font-weight: 700; }
+  .acl  { color: var(--acl); font-weight: 700; }
+  .tbl  { font-family: Consolas, 'Courier New', monospace; font-size: 13px; color: var(--muted); }
+
+  /* Compact bullet list for architecture laws */
+  .laws { margin: 10px 0 0; padding-left: 20px; }
+  .laws li { margin: 6px 0; }
+
+  @media (max-width: 560px) { body { font-size: 15px; } h1 { font-size: 30px; } }
+</style>
+</head>
+<body>
+
+<p class="eyebrow">Domain-Driven Design &middot; EWalletDDD Quick Reference</p>
+<h1>EWalletDDD, mapped to folders</h1>
+<p class="lede"><b>Subject: this actual repo</b> &mdash; <span class="file">com.keroles.ewalletddd</span>,
+5 bounded contexts, MySQL-backed. Where <span class="file">ddd/ddd-cheatsheet.html</span> maps DDD
+vocabulary to a generic wallet, this sheet maps it to the code that's actually on disk. Source of
+truth for details: <span class="file">EWalletDDD/DDD-STUDY.md</span>.</p>
+<hr class="rule">
+
+<h2>The four words, and which ones are folders</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Word</th>
+      <th>What it is</th>
+      <th>A folder?</th>
+      <th>In EWalletDDD</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="k">Domain</td>
+      <td>The whole business problem</td>
+      <td><span class="no">No</span> &mdash; it's the whole app</td>
+      <td><i>&ldquo;a digital wallet for stablecoins&rdquo;</i></td>
+    </tr>
+    <tr>
+      <td class="k">Subdomain</td>
+      <td>A slice of the business:
+        <span class="t-core">Core</span> /
+        <span class="t-support">Supporting</span> /
+        <span class="t-generic">Generic</span></td>
+      <td><span class="no">No</span> &mdash; a classification, a way to think</td>
+      <td><i>Accounting is Core (only one Keroles labeled explicitly);
+        Transfer read as Core too &mdash; both move real balances.
+        Cashout/Topup read as Supporting &mdash; rail orchestration around the ledger.
+        Pricing reads as Generic &mdash; a config-driven fee calculator, the
+        kind of thing you could buy off the shelf.</i></td>
+    </tr>
+    <tr>
+      <td class="k">Bounded Context</td>
+      <td>A boundary where one model is valid</td>
+      <td><span class="yes">Yes</span> &mdash; your top-level folder</td>
+      <td><i>accounting, cashout, topup, transfer, pricing</i></td>
+    </tr>
+    <tr>
+      <td class="k">Aggregate</td>
+      <td>A cluster guarded by one root Entity</td>
+      <td><span class="yes">Yes</span> &mdash; a folder inside a context</td>
+      <td><i>Account, CashoutRequest, TopupRequest, Transfer</i></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Folder structure &mdash; com.keroles.ewalletddd</h2>
+
+<ul class="legend">
+  <li><span class="t-core">Core</span></li>
+  <li><span class="t-support">Supporting</span></li>
+  <li><span class="t-generic">Generic</span></li>
+  <li><span class="port">PORT</span> = interface</li>
+  <li><span class="acl">ACL</span> = anticorruption adapter (only class allowed to import the other context)</li>
+</ul>
+
+<ul class="tree">
+  <li><span class="dir">com.keroles.ewalletddd</span>
+    <ul>
+      <li><span class="dir">shared.domain</span> <span class="why">&mdash; no context, just shared value objects</span>
+        <ul>
+          <li><span class="file">Money.java</span> <span class="why">&mdash; VO, non-negative, fixed 2dp scale</span></li>
+          <li><span class="file">Currency.java</span> <span class="why">&mdash; VO wrapping a code, deliberately NOT java.util.Currency (that's ISO-4217 fiat-only; BTC/ETH/SOL would throw)</span></li>
+          <li><span class="file">UserId.java</span></li>
+        </ul>
+      </li>
+
+      <li><span class="dir">accounting</span> &mdash; <span class="t-core">Bounded Context (Core)</span> <span class="tbl">tables a_*</span>
+        <ul>
+          <li><span class="dir">domain.model</span>
+            <ul>
+              <li><span class="file">Account.java</span> <span class="why">&mdash; Aggregate Root; verbs deposit/withdraw/hold/settle/release, no setters</span></li>
+              <li><span class="file">Transaction.java</span> <span class="why">&mdash; Aggregate Root; nested Entry/Transfer/Type/Status/Direction</span></li>
+              <li><span class="file">User.java</span> <span class="why">&mdash; minimal aggregate, id+createdAt only; Onboarding will own the rich User</span></li>
+            </ul>
+          </li>
+          <li><span class="dir">domain.valueObject</span>
+            <ul>
+              <li><span class="file">AccountId, TransactionId</span></li>
+              <li><span class="file">AccountReference</span> <span class="why">&mdash; static FEE/VAT well-known accounts</span></li>
+              <li><span class="file">AccountType</span> <span class="why">&mdash; SYSTEM/USER/EXTERNAL/FEE/VAT</span></li>
+              <li><span class="file">Party</span> <span class="why">&mdash; a tx endpoint: reference + AccountType</span></li>
+            </ul>
+          </li>
+          <li><span class="dir">domain.event</span>
+            <span class="file">AccountOpenedEvent, MoneyDepositedEvent, MoneyWithdrawnEvent, FundsHeldEvent, FundsSettledEvent, FundsReleasedEvent</span>
+          </li>
+          <li><span class="dir">domain.repository</span> &mdash; <span class="port">PORT</span>
+            <span class="file">AccountRepository, TransactionRepository, UserRepository</span>
+          </li>
+          <li><span class="dir">application</span> <span class="why">&mdash; the ONLY door other contexts may call</span>
+            <ul>
+              <li><span class="file">AccountApplicationService</span> <span class="why">&mdash; lifecycle+queries: openAccount, getAccount</span></li>
+              <li><span class="file">TransactionApplicationService</span> <span class="why">&mdash; topup / transfer / cashout / settle / release</span></li>
+            </ul>
+          </li>
+          <li><span class="dir">infrastructure.persistence</span>
+            <span class="why">&mdash; entity / mapper / repository(SpringData) / adapter, Option B save (dirty-check on a managed entity, @Version optimistic lock)</span>
+          </li>
+          <li><span class="dir">infrastructure.reference</span> <span class="why">&mdash; AccountType/Currency seed rows, repo-only CommandLineRunner, no aggregate &mdash; the one sanctioned "infra talks straight to infra" exception</span></li>
+          <li><span class="dir">presentation</span> <span class="file">AccountController</span> <span class="why">(open/get/topup/transfer &mdash; cashout/settle/release are NOT public REST)</span></li>
+        </ul>
+      </li>
+
+      <li><span class="dir">cashout</span> &mdash; <span class="t-support">Bounded Context (Supporting)</span> <span class="tbl">tables c_*</span>
+        <ul>
+          <li><span class="dir">domain.model</span> <span class="file">CashoutRequest</span> <span class="why">&mdash; state machine RESERVED&rarr;DISPATCHED&rarr;CONFIRMED/FAILED</span></li>
+          <li><span class="dir">domain.valueObject</span> <span class="file">CashoutId, Rail (AANI/LULU/MBANK), LedgerAccountRef, LedgerReservationRef</span></li>
+          <li><span class="dir">domain.port</span> &mdash; <span class="port">PORT</span>
+            <span class="file">CashoutRailPort, CashoutRailRegistry, LedgerAccountPort</span>
+          </li>
+          <li><span class="dir">application</span> <span class="file">CashoutApplicationService</span> <span class="why">&mdash; requestCashout &rarr; CashoutId, confirm(id), fail(id), get(id)</span></li>
+          <li><span class="dir">infrastructure.ledger</span> <span class="file">LedgerAccountAdapter</span> &mdash; <span class="acl">ACL</span> <span class="why">only cashout class importing accounting.*</span></li>
+          <li><span class="dir">infrastructure.rail</span> <span class="file">AaniAdapter, LuLuAdapter, MbankAdapter</span> <span class="why">(fakes) + SpringCashoutRailRegistry, self-assembles by Rail</span></li>
+          <li><span class="dir">presentation</span> <span class="file">CashoutController</span></li>
+        </ul>
+      </li>
+
+      <li><span class="dir">topup</span> &mdash; <span class="t-support">Bounded Context (Supporting)</span> <span class="tbl">tables t_*</span>
+        <ul>
+          <li><span class="dir">domain.model</span> <span class="file">TopupRequest</span> <span class="why">&mdash; PENDING&rarr;COMPLETED/FAILED, deliberately NO hold: the money isn't the user's until the rail delivers it</span></li>
+          <li><span class="dir">domain.port</span> &mdash; <span class="port">PORT</span> <span class="file">TopupRailPort, LedgerTopupPort, TopupRailRegistry</span></li>
+          <li><span class="dir">application</span> <span class="file">TopupApplicationService</span> <span class="why">&mdash; requestTopup, confirm, fail, get</span></li>
+          <li><span class="dir">infrastructure.ledger</span> <span class="file">LedgerTopupAdapter</span> &mdash; <span class="acl">ACL</span></li>
+          <li><span class="dir">infrastructure.rail</span> <span class="file">TcsAdapter</span> <span class="why">(async&rarr;PENDING)</span>, <span class="file">MbankAdapter</span> <span class="why">(sync&rarr;CONFIRMED, bean "topupMbankAdapter" &mdash; cashout already owns the default MbankAdapter bean name)</span></li>
+          <li><span class="dir">presentation</span> <span class="file">TopupController</span></li>
+        </ul>
+      </li>
+
+      <li><span class="dir">transfer</span> &mdash; <span class="t-core">Bounded Context (Core)</span> <span class="tbl">tables tr_*</span>
+        <ul>
+          <li><span class="dir">domain.model</span> <span class="file">Transfer</span> <span class="why">&mdash; NO state machine; constructed already-complete via complete(from,to,amount,holdRef,settleRef)</span></li>
+          <li><span class="dir">domain.valueObject</span> <span class="file">TransferId, LedgerHoldRef, LedgerSettleRef, FeeLeg (Payer SENDER/RECEIVER &times; FeeTarget FEE/VAT &times; Money)</span></li>
+          <li><span class="dir">domain.port</span> &mdash; <span class="port">PORT</span>
+            <span class="file">LedgerTransferPort</span> <span class="why">(hold, settle-with-legs)</span>,
+            <span class="file">PricingPort</span> <span class="why">(calculateTransferFees &rarr; FeeQuote, this context's own ACL contract into Pricing)</span>
+          </li>
+          <li><span class="dir">application</span> <span class="file">TransferApplicationService</span> <span class="why">&mdash; ask Pricing for fees FIRST (fail before any hold exists), hold amount+senderFee+senderVat, build 4 FeeLegs, settle(hold, principal, legs), self-transfer guarded &mdash; one @Transactional call</span></li>
+          <li><span class="dir">infrastructure.ledger</span> <span class="file">LedgerTransferAdapter</span> &mdash; <span class="acl">ACL</span> <span class="why">only transfer class importing accounting.*</span></li>
+          <li><span class="dir">infrastructure.pricing</span> <span class="file">PricingAdapter</span> &mdash; <span class="acl">ACL</span> <span class="why">only transfer class importing pricing.*</span></li>
+          <li><span class="dir">presentation</span> <span class="file">TransferController</span></li>
+        </ul>
+      </li>
+
+      <li><span class="dir">pricing</span> &mdash; <span class="t-generic">Bounded Context (Generic)</span> <span class="tbl">tables p_*</span>
+        <ul>
+          <li><span class="dir">domain.valueObject</span> <span class="file">TransactionType (own copy), FeeType (VALUE/PERCENTAGE), FeeChargeRule, FeeCalculationResult</span></li>
+          <li><span class="dir">domain.repository</span> &mdash; <span class="port">PORT</span> <span class="file">FeeChargeRepository</span> <span class="why">(never empty &mdash; unconfigured type resolves to FeeChargeRule.zero())</span></li>
+          <li><span class="dir">domain.service</span> <span class="file">FeeCalculationService</span> <span class="why">&mdash; pure, no Spring; one strategy per TransactionType (Topup/Cashout/Transfer), shared math in FeeMath</span></li>
+          <li><span class="dir">application</span> <span class="file">PricingApplicationService</span> <span class="why">&mdash; calculateFees(type, amount), never throws</span></li>
+          <li><span class="dir">infrastructure.persistence</span> <span class="why">&mdash; read-only, no @Version (config data, not an aggregate)</span></li>
+          <li class="why">no presentation/ yet &mdash; nothing asked for a REST edge</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h2>Ledger money flows &mdash; the actual verbs</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Flow</th>
+      <th>Direction</th>
+      <th>Balance verbs</th>
+      <th>Entries</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="k">topup</td><td>system &rarr; user</td><td>system.withdraw + user.deposit</td><td>2 (system DEBIT, user CREDIT)</td><td>COMPLETED, atomic</td></tr>
+    <tr><td class="k">transfer</td><td>user &rarr; user</td><td>from.withdraw + to.deposit</td><td>2</td><td>COMPLETED, atomic</td></tr>
+    <tr><td class="k">cashout</td><td>user &rarr; system</td><td>user.hold only</td><td>1 (user DEBIT)</td><td>PENDING</td></tr>
+    <tr><td class="k">settle</td><td>(cashout success)</td><td>user.settle + system.deposit</td><td>append system CREDIT &rarr; 2</td><td>COMPLETED</td></tr>
+    <tr><td class="k">release</td><td>(cashout fail)</td><td>user.release only</td><td>still 1</td><td>FAILED</td></tr>
+  </tbody>
+</table>
+<p class="lede" style="font-size:14px;margin-top:8px;"><i>cashout / settle / release each run in ONE DB transaction &mdash; no double-spend. Transaction status guard IS the idempotency check (duplicate settle throws), proven by <span class="file">CashoutRejectAtDispatchTest</span> / <span class="file">TopupDuplicateCallbackTest</span>.</i></p>
+
+<h2>Architecture laws, condensed</h2>
+
+<ul class="laws">
+  <li><b>Layers per context:</b> <span class="file">domain/</span> (pure JDK, no Spring/JPA) &middot; <span class="file">application/</span> (use cases, @Transactional, no business rules) &middot; <span class="file">infrastructure/</span> (persistence, adapters) &middot; <span class="file">presentation/</span> (controllers, DTOs).</li>
+  <li><b>Only the Application Service is exposed</b> to other contexts &mdash; never the aggregate, domain service, or repository directly.</li>
+  <li><b>Business verbs, never setters.</b> Events are raised inside the aggregate, pulled and published by the app service.</li>
+  <li><b>Repository save = Option B:</b> adapter loads the managed JPA entity, copies domain state onto it &rarr; dirty checking does the UPDATE, <span class="file">@Version</span> works, domain stays version-free.</li>
+  <li><b>Tables belong to ONE context, full stop</b> &mdash; prefix (<span class="file">a_/c_/t_/tr_/p_</span>) makes ownership visible in the schema itself; other contexts never SELECT them.</li>
+  <li><b>Idempotency = guarded state transitions</b> on the aggregate (duplicate settle throws), not ifs in a controller.</li>
+  <li><b>Cross-context calls only through one ACL class per pair</b> (<span class="acl">ACL</span> tag above) &mdash; keeps the future microservice split a matter of moving a package, not rewriting call sites.</li>
+  <li><b>Only Application Service and ValueObject are shareable</b> across contexts &mdash; Aggregate, Entity, domain Service, Repository never cross a context boundary, not even read-only.</li>
+  <li><b>Always hexagonal: Ports &amp; Adapters.</b> Domain/Application define <span class="port">PORT</span> interfaces; <span class="file">infrastructure/</span> supplies adapters (persistence, ledger, rail, pricing). Domain depends on nothing outward &mdash; adapters depend on the port, never reverse.</li>
+</ul>
+
+</body>
+</html>
