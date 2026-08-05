@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WSO2 API Manager — Study Notes</title>
+<style>
+  :root {
+    --paper: #eef1ec;
+    --paper-raised: #ffffff;
+    --ink: #1b2420;
+    --ink-soft: #4b5750;
+    --line: rgba(27,36,32,0.13);
+    --amber: #c96a12;
+    --amber-soft: rgba(201,106,18,0.10);
+    --teal: #256e65;
+    --teal-soft: rgba(37,110,101,0.10);
+    --warn: #a3392c;
+    --warn-soft: rgba(163,57,44,0.08);
+    --ok: #3f7a4f;
+    --ok-soft: rgba(63,122,79,0.12);
+    --open: #8a938d;
+    --open-soft: rgba(138,147,141,0.14);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono, .pill-path {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.88em;
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 6rem;
+  }
+
+  header.top {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.2rem;
+  }
+  .eyebrow {
+    font-family: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  h1 {
+    font-family: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    line-height: 1.12;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.28em 0.7em;
+    border-radius: 999px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  nav.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin-bottom: 3rem;
+    font-size: 0.86rem;
+  }
+  nav.toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-bottom-color: var(--ink-soft); }
+  nav.toc span.sep { color: var(--line); }
+
+  section { margin-bottom: 3.2rem; scroll-margin-top: 1.5rem; }
+  section > h2 {
+    font-family: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    margin: 0 0 1.1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6em;
+  }
+  section > h2 .num {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+  .example-head {
+    font-family: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.01em;
+    margin: 0 0 0.2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6em;
+  }
+  .example-sub {
+    color: var(--ink-soft);
+    margin: 0 0 1.1rem;
+  }
+  section > p { margin: 0 0 1rem; }
+  section > p:last-child { margin-bottom: 0; }
+
+  .plane-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.8rem;
+  }
+  .plane {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+  }
+  .plane .name { font-weight: 700; font-size: 0.92rem; }
+  .plane .role { color: var(--ink-soft); font-size: 0.83rem; margin-top: 0.2rem; }
+
+  .flow-line {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.92rem;
+    overflow-x: auto;
+  }
+  .flow-line .mono { color: var(--ink); }
+  .flow-line .arrow { color: var(--ink-soft); padding: 0 0.3em; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2.1rem 1fr;
+    gap: 0 1rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .step:first-of-type { border-top: none; }
+  .step .n {
+    font-family: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+    font-size: 1.2rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.1em;
+  }
+  .step.pub .n { color: var(--amber); }
+  .step.dev .n { color: var(--teal); }
+  .step-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .plane-tag {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.15em 0.55em;
+    border-radius: 5px;
+    font-weight: 700;
+  }
+  .plane-tag.pub { background: var(--amber-soft); color: var(--amber); }
+  .plane-tag.dev { background: var(--teal-soft); color: var(--teal); }
+  .plane-tag.test { background: var(--open-soft); color: var(--ink-soft); }
+  .step p { margin: 0.2rem 0 0; color: var(--ink-soft); }
+  .step p code { color: var(--ink); background: var(--paper); padding: 0.05em 0.4em; border-radius: 4px; }
+  .step .loc {
+    margin: 0.5rem 0 0;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    display: inline-block;
+  }
+  .step .loc b { color: var(--ink); }
+  .step .loc a { color: var(--teal); }
+
+  .gotcha {
+    background: var(--warn-soft);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 8px 8px 0;
+    padding: 0.7rem 1rem;
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+  }
+  .gotcha b { color: var(--warn); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table th, table td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table tr:last-child td { border-bottom: none; }
+  table th { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); background: var(--paper-raised); }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-pill.done { background: var(--ok-soft); color: var(--ok); }
+  .status-pill.open { background: var(--open-soft); color: var(--ink-soft); }
+
+  .log-item { padding: 0.85rem 0; border-top: 1px solid var(--line); }
+  .log-item:first-child { border-top: none; }
+  .log-item .k { font-weight: 700; }
+  .log-item p { margin: 0.25rem 0 0; color: var(--ink-soft); }
+
+  .status-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  ::selection { background: var(--amber-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Learning Reference · springCload/wso2</div>
+    <h1>WSO2 API Manager — Study Notes</h1>
+    <p class="lede">How a plain Spring Boot backend becomes a managed, gateway-fronted API: publish it, subscribe an app to it, mint a token, call it. Continuation file for <code>wso2/todo.md</code> — read this before the next session, update it after.</p>
+    <div class="meta-row">
+      <span class="chip">Install <b>wso2am-4.4.0</b></span>
+      <span class="chip">Admin login <b>admin/admin</b></span>
+    </div>
+    <div class="table-wrap" style="margin-top:1rem;">
+      <table>
+        <thead><tr><th>Portal</th><th>URL</th><th>Credentials</th></tr></thead>
+        <tbody>
+          <tr><td>Carbon Console</td><td><a href="https://localhost:9443/carbon" target="_blank"><code>https://localhost:9443/carbon</code></a></td><td>admin / admin</td></tr>
+          <tr><td>Publisher</td><td><a href="https://localhost:9443/publisher" target="_blank"><code>https://localhost:9443/publisher</code></a></td><td>admin / admin</td></tr>
+          <tr><td>DevPortal</td><td><a href="https://localhost:9443/devportal" target="_blank"><code>https://localhost:9443/devportal</code></a></td><td>admin / admin</td></tr>
+          <tr><td>Gateway</td><td><a href="https://localhost:8243" target="_blank"><code>https://localhost:8243</code></a> · <a href="http://localhost:8280" target="_blank"><code>http://localhost:8280</code></a></td><td>—</td></tr>
+          <tr><td>Backend</td><td><a href="http://localhost:8092" target="_blank"><code>http://localhost:8092</code></a></td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#concepts">Concepts</a><span class="sep">·</span>
+    <a href="#planes">4-plane map</a><span class="sep">·</span>
+    <a href="#workflow">Workflow</a><span class="sep">·</span>
+    <a href="#dummyjson">Example: DummyJSON</a><span class="sep">·</span>
+    <a href="#versioning">Versioning</a><span class="sep">·</span>
+    <a href="#analytics">Analytics</a><span class="sep">·</span>
+    <a href="#roadmap">Roadmap</a><span class="sep">·</span>
+    <a href="#status">Current status</a><span class="sep">·</span>
+    <a href="#log">Notes &amp; gotchas</a>
+  </nav>
+
+  <section id="concepts">
+    <h2><span class="num">01</span> What problem this solves</h2>
+    <p>An API gateway sits between callers and a backend so the backend never faces the internet directly. WSO2 API Manager is a full <b>API management</b> layer built on top of that idea — not just routing (that's <code>LoadBalancer/</code> in this repo) and not just service lookup (that's <code>ServiceDiscovery/</code>'s Eureka). It adds a lifecycle for the API itself, a self-service catalog for consumers, and OAuth2-based access control in front of the plain backend.</p>
+    <p>Reach for WSO2 AM over Spring Cloud Gateway or a bare Nginx proxy when you need the governance/monetization/analytics side — API lifecycle, subscriber self-service, throttling tiers, per-scope authorization — not just lightweight request routing.</p>
+  </section>
+
+  <section id="planes">
+    <h2><span class="num">02</span> The four planes</h2>
+    <div class="plane-grid">
+      <div class="plane"><div class="name">Traffic Manager</div><div class="role">the gateway itself + rate limiting</div></div>
+      <div class="plane"><div class="name">Publisher</div><div class="role">provider side — API design &amp; lifecycle</div></div>
+      <div class="plane"><div class="name">DevPortal</div><div class="role">consumer side — catalog, apps, keys</div></div>
+      <div class="plane"><div class="name">Key Manager</div><div class="role">issues &amp; validates OAuth2 tokens</div></div>
+    </div>
+  </section>
+
+  <section id="workflow">
+    <h2><span class="num">03</span> Backend → live API, step by step</h2>
+    <p>Everything downstream of the gateway is one substitution: a caller hits <code>gatewayHost/&lt;context&gt;/&lt;version&gt;/*</code> and WSO2 forwards whatever's after the version straight onto <code>endpoint/*</code>.</p>
+    <div class="flow-line">
+      <span class="mono">mbank.com/hello</span>
+      <span class="arrow">→ (client calls)</span>
+      <span class="mono">wso2domain.com/&lt;context&gt;/&lt;version&gt;/hello</span>
+      <span class="arrow">→ (gateway proxies)</span>
+      <span class="mono">&lt;endpoint&gt;/hello</span>
+    </div>
+
+    <div style="margin-top:1.6rem;">
+      <div class="step pub">
+        <div class="n">1</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Create the API</div>
+          <p>REST API from scratch: <code>Name</code>, <code>Context</code> (the path segment after the gateway host), <code>Version</code> (start <code>1.0.0</code>), <code>Endpoint</code> = your real backend base URL. Example used here: <code>WSO2LearningAPI</code>, context <code>/wso2learn</code>, endpoint <a href="http://localhost:8092" target="_blank"><code>http://localhost:8092</code></a>.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">https://localhost:9443/publisher</a> → <b>Create API</b> button → <b>REST API</b> → <b>From Scratch</b></p>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">2</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Check the resources</div>
+          <p>"From Scratch" defaults to <b>one wildcard resource</b> — <code>/*</code> with every method (GET/PUT/POST/DELETE/PATCH) — which is why any backend path works with zero mapping. To scope down to your real paths (e.g. expose only <code>GET /items/{id}</code>), open the <b>resources</b> page (under <b>API Configurations</b> in the left menu), not the API overview page — the overview only shows a read-only summary of what resources already exist.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">Publisher</a> → open <code>WSO2LearningAPI</code> → left menu <b>API Configurations</b> → <b>resources</b> → <a href="https://localhost:9443/publisher/apis/{api-id}/resources" target="_blank"><code>/publisher/apis/{api-id}/resources</code></a></p>
+          <div class="gotcha"><b>Gotcha —</b> the left menu's <b>API Configurations</b> group holds the editable pages (resources, API definition, endpoints, policies…); the overview is just a summary card. To split the lone <code>/*</code> into explicit rows like <code>GET /hello</code> and <code>GET /items/{id}</code>, delete the wildcard row inside the <b>resources</b> editor and add the real ones — only then does a per-resource scope selector appear.</div>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">3</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Publish</div>
+          <p>Lifecycle: <code>Created → Published</code>. Unpublished APIs never appear in DevPortal, regardless of how the resources are configured.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">Publisher</a> → open <code>WSO2LearningAPI</code> → API overview page (top) → <b>Lifecycle</b> control (shows current state) → <b>Publish</b></p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">4</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Pick an application</div>
+          <p><b>Applications</b> (top nav) → use the built-in <code>DefaultApplication</code> or create your own. An application holds keys and subscriptions — it isn't tied to one API, so the same app can subscribe to many.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">https://localhost:9443/devportal</a> → <b>Applications</b> (top nav)</p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">5</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Subscribe the app to the API</div>
+          <p><b>APIs</b> → open the API → <b>Subscriptions</b> tab → pick the application → Subscribe. This is the actual authorization gate — a technically valid token from an unsubscribed app still gets rejected at the gateway.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">DevPortal</a> → <b>APIs</b> → open <code>WSO2LearningAPI</code> → <b>Subscriptions</b> tab → app → <b>Subscribe</b></p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">6</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Generate keys</div>
+          <p>Inside the application → <b>Sandbox Keys</b> (Production Keys is a separate credential set) → Generate Keys → <code>Consumer Key</code> + <code>Consumer Secret</code>. These identify the <i>application</i>, not any one subscription.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">DevPortal</a> → <b>Applications</b> → open app → <b>Production Keys</b> / <b>Sandbox Keys</b> tab → <b>Generate Keys</b></p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">7</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Generate an access token</div>
+          <p>Same screen → Generate Access Token. Under the hood this is a <code>client_credentials</code> grant: <code>POST <a href="https://localhost:9443/oauth2/token" target="_blank">https://localhost:9443/oauth2/token</a></code>, Basic-authed with the consumer key/secret. Token is short-lived — <b>1 hour</b> by default — copy it now.</p>
+          <p class="loc"><b>Where:</b> same Keys tab (from step 6) → <b>Generate Access Token</b></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">8</div>
+        <div>
+          <div class="step-title"><span class="plane-tag test">Test</span> Call it through the gateway</div>
+          <p>API's <b>Overview</b> tab has the invoke URL — copy it, append the resource path, call with <code>Authorization: Bearer &lt;token&gt;</code> from Postman/curl.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">DevPortal</a> → <b>APIs</b> → open <code>WSO2LearningAPI</code> → <b>Overview</b> tab → copy <b>HTTPS Endpoint</b> (e.g. <code>https://localhost:8243/wso2learn/1.0.0</code>)</p>
+          <div class="gotcha"><b>Gotcha —</b> steps 6/7 (keys, token) don't strictly have to come after step 5 (subscribe) — WSO2 lets you generate both first. But the token is dead weight against this API until the subscription exists: authorization is checked at the subscription level, not just token validity/signature.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="dummyjson">
+    <h1 class="example-head"><span class="num">04</span> Example</h1>
+    <p class="example-sub">DummyJSON — a public API behind the gateway</p>
+    <p>Say your app needs data from a third-party public API like <a href="https://dummyjson.com" target="_blank">dummyjson.com</a> (<code>GET /posts</code>, <code>GET /posts/{id}</code>, …). Instead of letting callers hit the internet directly, expose it through WSO2: one API, one subscription, one token — the third party stays hidden behind the gateway like any other backend.</p>
+    <div class="flow-line">
+      <span class="mono">client</span>
+      <span class="arrow">→ (calls)</span>
+      <span class="mono">https://localhost:8243/dummyjson/1.0.0/posts</span>
+      <span class="arrow">→ (gateway proxies)</span>
+      <a href="https://dummyjson.com" target="_blank"><span class="mono">dummyjson.com/posts</span></a>
+    </div>
+
+    <div style="margin-top:1.6rem;">
+      <div class="step pub">
+        <div class="n">1</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Create the API</div>
+          <p>REST API from scratch: <code>Name</code> = <code>DummyJSONAPI</code>, <code>Context</code> = <code>/dummyjson</code>, <code>Version</code> = <code>1.0.0</code>, <code>Endpoint</code> = <a href="https://dummyjson.com" target="_blank"><code>https://dummyjson.com</code></a> — the third-party base URL, not a local service.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">https://localhost:9443/publisher</a> → <b>Create API</b> → <b>REST API</b> → <b>From Scratch</b></p>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">2</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Replace the wildcard resource</div>
+          <p>Open the <b>resources</b> page (under <b>API Configurations</b>): delete the default <code>/*</code> row and add <code>GET /posts</code> (and optionally <code>GET /posts/{id}</code>). Anything the gateway doesn't have as a resource row is rejected with 404 — the wildcard is the only thing that passes everything.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">Publisher</a> → open <code>DummyJSONAPI</code> → left menu <b>API Configurations</b> → <b>resources</b> → <a href="https://localhost:9443/publisher/apis/{api-id}/resources" target="_blank"><code>/publisher/apis/{api-id}/resources</code></a></p>
+          <div class="gotcha"><b>Gotcha —</b> WSO2 tests the endpoint at save time. <code>dummyjson.com</code> works out of the box, but if your box can't reach the internet you'll see a connection error in the endpoint test — the gateway still needs outbound HTTPS.</div>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">3</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Publish</div>
+          <p>Lifecycle: <code>Created → Published</code>, so the API shows up in DevPortal.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">Publisher</a> → open <code>DummyJSONAPI</code> → API overview page (top) → <b>Lifecycle</b> control → <b>Publish</b></p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">4</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Subscribe</div>
+          <p><b>APIs</b> → open <code>DummyJSONAPI</code> → <b>Subscriptions</b> → pick <code>DefaultApplication</code> → Subscribe. (Existing app from the <a href="#workflow">workflow</a> section works too — an app can subscribe to many APIs.)</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">https://localhost:9443/devportal</a> → <b>APIs</b> → open <code>DummyJSONAPI</code> → <b>Subscriptions</b> tab → app → <b>Subscribe</b></p>
+        </div>
+      </div>
+      <div class="step dev">
+        <div class="n">5</div>
+        <div>
+          <div class="step-title"><span class="plane-tag dev">DevPortal</span> Generate keys + token</div>
+          <p>Application → <b>Sandbox Keys</b> → Generate Keys, then Generate Access Token (a <code>client_credentials</code> grant against <code>POST <a href="https://localhost:9443/oauth2/token" target="_blank">https://localhost:9443/oauth2/token</a></code>). Copy the token.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">DevPortal</a> → <b>Applications</b> → open app → <b>Sandbox Keys</b> tab → <b>Generate Keys</b> → <b>Generate Access Token</b></p>
+        </div>
+      </div>
+      <div class="step test">
+        <div class="n">6</div>
+        <div>
+          <div class="step-title"><span class="plane-tag test">Test</span> Call it through the gateway</div>
+          <p>Invoke URL from the API's <b>Overview</b> tab is <code>https://localhost:8243/dummyjson/1.0.0</code> — append the resource path and send the bearer token:</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/devportal" target="_blank">DevPortal</a> → <b>APIs</b> → open <code>DummyJSONAPI</code> → <b>Overview</b> tab → copy <b>HTTPS Endpoint</b>; then run the curl below from any terminal</p>
+          <div class="flow-line" style="margin-top:0.5rem;">
+            <span class="mono">curl -k -H "Authorization: Bearer &lt;token&gt;" <a href="https://localhost:8243/dummyjson/1.0.0/posts" target="_blank"><span class="mono">https://localhost:8243/dummyjson/1.0.0/posts</span></a></span>
+          </div>
+          <div class="gotcha"><b>Gotcha —</b> <code>-k</code> because the local gateway serves a self-signed cert. The response should match a direct <code>curl https://dummyjson.com/posts</code> — same <code>posts</code>/<code>total</code>/<code>skip</code>/<code>limit</code> shape.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="versioning">
+    <h2><span class="num">05</span> Versioning — v1/v2/v3 side by side</h2>
+    <p>The point of versions: <b>never break the people already calling you.</b> A breaking change (removed field, renamed resource, new auth requirement) against a live API breaks every existing subscriber's app. Versioning lets you ship that change as <code>2.0.0</code> while <code>1.0.0</code> keeps serving old consumers unchanged — both URLs live on the gateway at the same time.</p>
+    <div class="flow-line">
+      <span class="mono">https://localhost:8243/dummy-shit/1.0.0/posts</span>
+      <span class="arrow">→ old behavior (existing subscribers)</span>
+      <br><span class="mono">https://localhost:8243/dummy-shit/2.0.0/posts</span>
+      <span class="arrow">→ new behavior (new subscribers)</span>
+    </div>
+    <div class="gotcha"><b>Rule of thumb —</b> breaking change → new version; compatible change → just edit the current one. Adding a field isn't a version bump; renaming/removing one is.</div>
+
+    <div style="margin-top:1.6rem;">
+      <div class="step pub">
+        <div class="n">1</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Create New Version</div>
+          <p>On the overview page of the published API: <b>Create New Version</b> → type <code>2.0.0</code>. WSO2 <b>copies</b> the whole API — same context, same resources, same endpoint — into a brand-new separate API object.</p>
+          <p class="loc"><b>Where:</b> <a href="https://localhost:9443/publisher" target="_blank">Publisher</a> → open <code>dummyjson.com</code> → overview page (top) → <b>Create New Version</b></p>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">2</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Make the copy actually different</div>
+          <p>A copy of v1 is useless if it's identical. Change the endpoint, resources, or OpenAPI on the new version only. Each version has its <b>own</b> endpoint — editing v3 doesn't touch v1/v2.</p>
+          <p class="loc"><b>Where:</b> Publisher → open the new version → left menu <b>Runtime → endpoints</b> → edit <b>Production Endpoint</b> → <b>Save</b> → then <b>Deploy → Deployments → Create new revision</b> and deploy it to the gateway</p>
+          <div class="gotcha"><b>Gotcha —</b> the endpoint change doesn't take effect until you create a new revision and deploy it. "Save" alone updates the definition; "Deploy" is what pushes it to the gateway.</div>
+        </div>
+      </div>
+      <div class="step pub">
+        <div class="n">3</div>
+        <div>
+          <div class="step-title"><span class="plane-tag pub">Publisher</span> Publish the new version</div>
+          <p>Separate lifecycle per version. Publish v2.0.0 and it appears in DevPortal while v1.0.0 stays exactly as it was.</p>
+          <p class="loc"><b>Where:</b> Publisher → open the new version → overview (top) → <b>Lifecycle</b> control → <b>Publish</b></p>
+        </div>
+      </div>
+      <div class="step test">
+        <div class="n">4</div>
+        <div>
+          <div class="step-title"><span class="plane-tag test">Test</span> Verify both URLs independently</div>
+          <p>Hit each version against its own endpoint — v1 keeps the old behavior, v2 has the new. That's the whole point.</p>
+          <div class="flow-line" style="margin-top:0.5rem;">
+            <span class="mono">curl -k -H "Authorization: Bearer &lt;token&gt;" https://localhost:8243/dummy-shit/1.0.0/posts</span>
+            <br><span class="mono">curl -k -H "Authorization: Bearer &lt;token&gt;" https://localhost:8243/dummy-shit/2.0.0/posts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:1.2rem;">
+      <table>
+        <thead><tr><th>Where</th><th>What you see</th><th>Normal?</th></tr></thead>
+        <tbody>
+          <tr><td>Publisher API list</td><td>Every version as its own row (<code>1.0.0</code>, <code>2.0.0</code>, <code>3.0.0</code>)</td><td><b>Yes</b> — each version is a separate API object with its own lifecycle</td></tr>
+          <tr><td>DevPortal API list</td><td>Only the default/latest version</td><td><b>Yes</b> — old versions stay live on the gateway but are hidden from discovery</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="gotcha" style="margin-top:0.8rem;"><b>Show old versions in DevPortal?</b> Admin Portal → <a href="https://localhost:9443/admin" target="_blank">https://localhost:9443/admin</a> → <b>Settings</b> → toggle <b>"Show API versions"</b> ON. Then the DevPortal shows a version dropdown on the API details page. Per-API, <b>Basic info → "Make this the default version"</b> picks which one is shown by default.</div>
+    <div class="gotcha"><b>Sunsetting the old one —</b> don't delete v1. Walk it down: <b>Deprecate</b> (no new subscriptions, existing ones keep working) → <b>Retire</b> (off the gateway). That's how subscribers migrate on their schedule, not yours.</div>
+  </section>
+
+  <section id="analytics">
+    <h2><span class="num">06</span> Analytics — how it works</h2>
+    <p>WSO2 Analytics is the <b>observability layer</b> — it records what the gateway did and shows it in dashboards + per-request logs. It does <b>not</b> sit in the request path, so it never slows down or breaks real traffic. The key mental model: it doesn't <i>listen</i> to requests, it <i>receives</i> what the gateway pushes to it.</p>
+    <div class="flow-line">
+      <span class="mono">Client</span>
+      <span class="arrow">→</span>
+      <span class="mono">Gateway (8243)</span>
+      <span class="arrow">→</span>
+      <span class="mono">backend</span>
+      <br><span class="arrow">│</span>
+      <br><span class="arrow">└─ emits event</span>
+      <span class="arrow">→</span>
+      <span class="mono">Analytics worker</span>
+      <span class="arrow">→</span>
+      <span class="mono">stored data</span>
+      <span class="arrow">→</span>
+      <span class="mono">Dashboard / Publisher Logs tab</span>
+    </div>
+    <div style="margin-top:1rem;" class="step">
+      <div class="n">1</div>
+      <div>
+        <div class="step-title">The gateway emits events, it doesn't forward live traffic</div>
+        <p>When a request goes through <code>:8243</code>, the gateway also writes a <b>record</b> of it (who called, which API, response time, status code). That record is an <b>event/telemetry</b>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <div>
+        <div class="step-title">Events are pushed to the analytics worker</div>
+        <p>The gateway sends events to the analytics server over HTTP in <b>batches every few seconds</b> — which is why dashboard data isn't truly real-time.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <div>
+        <div class="step-title">Worker processes and stores them</div>
+        <p>The analytics worker runs a stream processor (Spark/WSO2 Streaming Integrator based in 4.x). It ingests the events, aggregates them (counts, sums, averages), and stores the results.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">4</div>
+      <div>
+        <div class="step-title">Dashboards query the stored data</div>
+        <p>Opening a dashboard runs a query against the stored/aggregated data — it is <b>not</b> watching live requests. Per-request detail (headers/body) lives in the Publisher → your API → <b>Logs</b> tab.</p>
+      </div>
+    </div>
+    <div class="gotcha"><b>Why this design?</b> Analytics stays downstream and async. If it's down, requests still work fine — you just lose the dashboards. Producer → consumer, same pattern as your Kafka install in <code>~/programs</code>.</div>
+  </section>
+
+  <section id="roadmap">
+    <h2><span class="num">07</span> Roadmap</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Stage</th><th>Covers</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>0 · Concepts</td><td>Gateway vs. AM vs. Spring Cloud Gateway/Nginx, 4-plane map</td><td><span class="status-pill open">reading</span></td></tr>
+          <tr><td>1 · First run</td><td>Server up, 3 UIs toured, admin/admin kept (learning box)</td><td><span class="status-pill done">done</span></td></tr>
+          <tr><td>2 · Target backend</td><td><code>BackendController</code> — <code>/hello</code>, <code>/items/{id}</code> on :8092</td><td><span class="status-pill done">done</span></td></tr>
+          <tr><td>3 · Publish first API</td><td>Create → resources → publish → subscribe → token → invoke</td><td><span class="status-pill done">done</span></td></tr>
+          <tr><td>4 · Security</td><td>No-token 401, client-credentials flow, scopes → 403</td><td><span class="status-pill open">in progress</span></td></tr>
+          <tr><td>5 · Traffic control</td><td>Throttling tiers, 429s, quota policy</td><td><span class="status-pill open">open</span></td></tr>
+          <tr><td>6 · Mediation</td><td>Sequence/policy editor, Synapse config underneath</td><td><span class="status-pill open">open</span></td></tr>
+          <tr><td>7 · Versioning</td><td>v1/v2 side by side, deprecate/retire</td><td><span class="status-pill open">in progress</span></td></tr>
+          <tr><td>8 · Observability</td><td>Analytics add-on, gateway access logs</td><td><span class="status-pill open">open</span></td></tr>
+          <tr><td>9 · Bigger picture</td><td>Microgateway, Docker/K8s, <code>apictl</code></td><td><span class="status-pill open">open</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="status">
+    <h2><span class="num">08</span> Current status</h2>
+    <div class="status-card">
+      <p>Stage 3 complete end to end: backend on <code>:8092</code>, published as <code>WSO2LearningAPI</code> (<code>/wso2learn</code>, <code>1.0.0</code>), subscribed via <code>DefaultApplication</code>, sandbox token minted, <code>/hello</code> through the gateway matched the direct backend call.</p>
+      <p>Mid-stage 4: discovered the API's resources are still the default wildcard <code>/*</code>, not the two explicit paths the scope exercise needs — currently splitting it in <b>API Configurations → resources</b> into <code>GET /hello</code> and <code>GET /items/{id}</code> so a <code>read_items</code> scope can be attached to just the latter.</p>
+      <p><b>Next:</b> finish the resource split, attach <code>read_items</code> to <code>/items/{id}</code> only, republish, then re-request tokens with/without the scope and confirm 403 on the unscoped one.</p>
+    </div>
+  </section>
+
+  <section id="log">
+    <h2><span class="num">09</span> Notes &amp; gotchas log</h2>
+
+    <div class="log-item">
+      <div class="k">Wildcard resource is the default, not a fallback.</div>
+      <p>"From Scratch" always starts you on one <code>/*</code> resource covering every HTTP method. It's easy to mistake this for "WSO2 auto-detected my two endpoints" — it didn't; it just proxies everything through unfiltered until you replace it.</p>
+    </div>
+    <div class="log-item">
+      <div class="k">Overview ≠ the resource editor.</div>
+      <p>The API overview page is a read-only summary card. The actual add/edit/delete UI for resources lives in the left menu under <b>API Configurations → resources</b> (<code>/publisher/apis/{api-id}/resources</code>), with the raw OpenAPI in <b>API definition</b> right below it. Scope selectors only show up per-row inside the resources editor, never on the overview.</p>
+    </div>
+    <div class="log-item">
+      <div class="k">Keys are per-application; the subscription is the real gate.</div>
+      <p>A consumer key/secret pair — and the token it produces — belongs to the <i>application</i>, not to any single API. WSO2 will happily hand out a valid token for an app that isn't subscribed to anything; the gateway rejects it at call time, not at token-issue time.</p>
+    </div>
+    <div class="log-item">
+      <div class="k">Token endpoint, unwrapped.</div>
+      <p>"Generate Access Token" in DevPortal is a thin UI over <code>POST <a href="https://localhost:9443/oauth2/token" target="_blank">https://localhost:9443/oauth2/token</a></code>, <code>grant_type=client_credentials</code>, consumer key/secret as HTTP Basic auth. Same call is scriptable directly with curl once the keys exist — the DevPortal button isn't the only way to get one.</p>
+    </div>
+    <div class="log-item">
+      <div class="k">Sandbox vs. Production keys are separate credential sets.</div>
+      <p>Generating Sandbox keys doesn't also produce Production ones — they're independent Consumer Key/Secret pairs under the same application, presumably gated to different environments/gateways in a real deployment.</p>
+    </div>
+    <div class="log-item">
+      <div class="k">admin/admin kept deliberately.</div>
+      <p>Default Carbon credentials were left unchanged — this is a local learning box only, not a decision to carry into anything shared or production-facing.</p>
+    </div>
+  </section>
+
+  <footer>
+    Companion: <code>wso2/todo.md</code> (task checklist) · this file is the narrative continuation, mirroring how <code>EWalletDDD/DDD-STUDY.md</code> is used for that module.
+  </footer>
+
+</div>
+</body>
+</html>

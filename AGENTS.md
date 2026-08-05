@@ -1,5 +1,11 @@
 # AGENTS.md
 
+> **🚨 THE USER IS A LEARNER 🚨**
+> The owner of this repo is **learning** — Spring Cloud, WSO2, microservices, everything here.
+> Assume NO prior knowledge. Explain concepts like you're teaching, not like you're reviewing a colleague's code.
+> Use plain language. Don't skip the "why". State what a feature does before assuming the user knows it.
+> When the user asks "does X support Y?" — they genuinely don't know; verify before answering, don't guess.
+
 > **Learning Reference Repository**
 > This repo is a hands-on learning reference for Spring Cloud micro-services concepts.
 > Each sub-module demonstrates one Spring Cloud feature in isolation (Config Server,
