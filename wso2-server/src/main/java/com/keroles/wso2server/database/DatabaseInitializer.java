@@ -1,4 +1,4 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.database;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;

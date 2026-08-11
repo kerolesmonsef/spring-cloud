@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<localEntry key="BackendServiceConn" xmlns="http://ws.apache.org/ns/synapse">
+    <http.init>
+        <connectionType>HTTP</connectionType>
+        <name>BackendServiceConn</name>
+        <baseUrl>http://localhost:8009</baseUrl>
+    </http.init>
+</localEntry>

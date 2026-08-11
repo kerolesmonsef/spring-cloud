@@ -1,4 +1,4 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.auth.controller;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;

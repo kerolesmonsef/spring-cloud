@@ -1,4 +1,9 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.controller;
+
+import com.keroles.wso2server.dto.LoginRequest;
+import com.keroles.wso2server.dto.LoginResponse;
+import com.keroles.wso2server.auth.security.JWTService;
+import com.keroles.wso2server.user.repository.UserRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

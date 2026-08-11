@@ -1,4 +1,4 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.auth.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

@@ -1,4 +1,6 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.user.repository;
+
+import com.keroles.wso2server.user.model.User;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;

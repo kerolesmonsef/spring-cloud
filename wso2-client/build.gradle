@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.keroles'
 version = '0.0.1-SNAPSHOT'
-description = 'wso2'
+description = 'wso2-client'
 
 java {
     toolchain {

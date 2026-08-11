@@ -30,6 +30,7 @@
 ---
 
 ## How to Work in This Repo
+- Never create Git commits. Leave all changes uncommitted for the user.
 - Use Java 17 toolchain (declared in each module's `build.gradle`).
 - Start a service from its module directory:
   - `cd ConfigServer && ./gradlew bootRun`

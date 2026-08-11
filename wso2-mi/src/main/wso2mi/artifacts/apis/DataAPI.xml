@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api xmlns="http://ws.apache.org/ns/synapse" name="DataAPI" context="/data">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+
+            <!-- Step 1: Call /login to get the token -->
+            <log category="INFO">
+                <message>Step 1 - Calling /login to get token</message>
+            </log>
+            <http.post configKey="BackendServiceConn">
+                <relativePath>/login</relativePath>
+                <headers>[[&quot;Content-Type&quot;,&quot;application/json&quot;]]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>{"username": "mbank", "password": "123456"}</requestBodyJson>
+                <responseVariable>loginResponse</responseVariable>
+                <overwriteBody>false</overwriteBody>
+            </http.post>
+
+            <!-- Step 2: Extract the token from the login response -->
+            <log category="INFO">
+                <message>Login response status: ${vars.loginResponse.attributes.statusCode}</message>
+            </log>
+            <variable name="authToken" type="STRING" expression="${vars.loginResponse.payload.token}"/>
+            <log category="INFO">
+                <message>Step 2 - Token received, calling /data with Bearer token</message>
+            </log>
+
+            <!-- Step 3: Call /data using the token as Bearer Authorization -->
+            <http.get configKey="BackendServiceConn">
+                <relativePath>/data</relativePath>
+                <headers>{${[["Authorization", "Bearer " + vars.authToken]]}}</headers>
+                <responseVariable>dataResponse</responseVariable>
+                <overwriteBody>false</overwriteBody>
+            </http.get>
+
+            <!-- Step 4: Return the /data response to the caller -->
+            <payloadFactory media-type="json">
+                <format>${vars.dataResponse.payload}</format>
+            </payloadFactory>
+            <property name="HTTP_SC" value="${vars.dataResponse.attributes.statusCode}" scope="axis2"/>
+            <respond/>
+
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR">
+                <message>Error occurred: ${properties.synapse.ERROR_MESSAGE}</message>
+            </log>
+            <payloadFactory media-type="json">
+                <format>{"error": "Integration failed", "detail": "${properties.synapse.ERROR_MESSAGE}"}</format>
+            </payloadFactory>
+            <property name="HTTP_SC" value="500" scope="axis2"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

@@ -1,4 +1,4 @@
-package com.keroles.wso2server;
+package com.keroles.wso2server.dto;
 
 public record LoginResponse(String token) {
 }

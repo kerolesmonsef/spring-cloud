@@ -1,0 +1,15 @@
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="Wso2Login">
+    <property name="REST_URL_POSTFIX" expression="$axis2:REST_URL_POSTFIX"/>
+    <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+    <payloadFactory media-type="json">
+        <format>{"username":"mbank","password":"123456"}</format>
+    </payloadFactory>
+    <call blocking="true">
+        <endpoint>
+            <http uri-template="http://localhost:8093/auth/login" method="POST"/>
+        </endpoint>
+    </call>
+    <property name="Authorization" scope="transport"
+              expression="fn:concat('Bearer ', json-eval($.token))"/>
+    <property name="REST_URL_POSTFIX" scope="axis2" expression="$ctx:REST_URL_POSTFIX"/>
+</sequence>
