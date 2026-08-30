@@ -28,6 +28,7 @@ Learning target: understand enough WSO2 Micro Integrator to read, change, build,
 - [ ] Understand JSON expressions
 - [ ] Understand request and response headers
 - [ ] Understand HTTP calls
+- [ ] Create an MI API that returns a static JSON response without calling a backend
 - [ ] Understand payload transformation
 - [ ] Understand HTTP status handling
 - [ ] Understand reusable sequences

@@ -1,0 +1,10 @@
+---
+key: "helloWorf-1.0.0"
+name : "helloWorf"
+displayName : "helloWorf"
+description: "helloWorf"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/helloworf"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

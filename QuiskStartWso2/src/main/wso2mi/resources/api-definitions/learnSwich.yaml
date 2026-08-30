@@ -1,0 +1,14 @@
+openapi: 3.0.1
+info:
+  title: learnSwich
+  description: API Definition of learnSwich
+  version: 1.0.0
+servers:
+  - url: http://localhost:8290/learnswich
+  - url: https://localhost:8253/learnswich
+paths:
+  /swich:
+    get:
+      responses:
+        default:
+          description: Default response

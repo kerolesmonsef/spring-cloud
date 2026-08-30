@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/learnswich" name="learnSwich" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/swich">
+        <inSequence>
+            <call>
+                <endpoint key="wso2ServerNotAuthEP"/>
+            </call>
+            <switch source="${payload.random}">
+                <case regex="1" >
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "random": ${payload.random}, "numberKey": "once" }</format>
+                    </payloadFactory>
+                </case>
+                <case regex="2">
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "random": ${payload.random}, "numberKey": "two" }</format>
+                    </payloadFactory>
+                </case>
+                <case regex="3" >
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "random": ${payload.random}, "numberKey": "three" }</format>
+                    </payloadFactory>
+                </case>
+                <case regex="4">
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "random": ${payload.random}, "numberKey": "four" }</format>
+                    </payloadFactory>
+                </case>
+                
+                
+                <default>
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "random": ${payload.random}, "numberKey": "unknown" }</format>
+                    </payloadFactory>
+                </default>
+            </switch>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>Request failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+                <property name="errorDetail" expression="get-property('ERROR_DETAIL')"/>
+                <property name="errorCode" expression="get-property('ERROR_CODE')"/>
+                <property name="errorException" expression="get-property('ERROR_EXCEPTION')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "request failed" }</format>
+            </payloadFactory>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

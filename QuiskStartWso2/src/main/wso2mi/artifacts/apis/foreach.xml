@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/foreach" name="foreach" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <call>
+                <endpoint key="wso2-server-users"/>
+            </call>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>raw response from backend</message>
+                <property name="body" expression="${payload}"/>
+                <property name="users" expression="${payload.users}"/>
+            </log>
+            <foreach collection="${payload.users}" parallel-execution="false" update-original="true" continue-without-aggregation="false">
+                <sequence>
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "id": ${payload.id}, "fname": "${payload.fname}", "lname": "${payload.lname}", "createdAt": "${payload.createdAt}", "full_name": "${payload.fname} ${payload.lname}" }</format>
+                    </payloadFactory>
+                </sequence>
+            </foreach>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>logs agter foeeach</message>
+                <property name="payload_after" expression="${payload}"/>
+            </log>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>Request failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+                <property name="errorDetail" expression="get-property('ERROR_DETAIL')"/>
+                <property name="errorCode" expression="get-property('ERROR_CODE')"/>
+                <property name="errorException" expression="get-property('ERROR_EXCEPTION')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "request failed" }</format>
+            </payloadFactory>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

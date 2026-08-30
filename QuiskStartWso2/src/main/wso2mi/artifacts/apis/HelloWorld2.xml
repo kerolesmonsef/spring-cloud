@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/hello2" name="HelloWorld2" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <payloadFactory  media-type="json" template-type="default">
+        
+        <format>{ "message": "hello world 2 get" }</format>
+            </payloadFactory>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>Request failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+                <property name="errorDetail" expression="get-property('ERROR_DETAIL')"/>
+                <property name="errorCode" expression="get-property('ERROR_CODE')"/>
+                <property name="errorException" expression="get-property('ERROR_EXCEPTION')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "request failed" }</format>
+            </payloadFactory>
+            <respond/>
+        </faultSequence>
+    </resource>
+    <resource methods="POST" uri-template="/if-else">
+        <inSequence>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>Request received</message>
+                <property name="body" expression="$body"/>
+                <property name="headers" expression="get-property('axis2', 'TRANSPORT_HEADERS')"/>
+            </log>
+            <call>
+                <endpoint key="wso2ServerNotAuthEP"/>
+            </call>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>Response received</message>
+                <property name="body" expression="$body"/>
+            </log>
+            <script language="js"><![CDATA[mc.setProperty("randomKey", Math.floor(Math.random() * 1000000));]]></script>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "original": "${payload.message}", "note": "reshaped by MI", "randomKey": ${props.synapse.randomKey} }</format>
+            </payloadFactory>
+            <filter xpath="${payload.randomKey &gt; 500000}">
+                <then>
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "result": "high", "randomKey": "${payload.randomKey}" }</format>
+                    </payloadFactory>
+                </then>
+                <else>
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "result": "low", "randomKey": "${payload.randomKey}" }</format>
+                    </payloadFactory>
+                </else>
+            </filter>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>Backend call failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+                <property name="errorDetail" expression="get-property('ERROR_DETAIL')"/>
+                <property name="errorCode" expression="get-property('ERROR_CODE')"/>
+                <property name="errorException" expression="get-property('ERROR_EXCEPTION')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "backend unavailable" }</format>
+            </payloadFactory>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>
