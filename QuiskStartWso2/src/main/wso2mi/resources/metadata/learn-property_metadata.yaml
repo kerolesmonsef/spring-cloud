@@ -1,0 +1,10 @@
+---
+key: "learn-property-1.0.0"
+name : "learn-property"
+displayName : "learn-property"
+description: "learn-property"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/learn-property"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

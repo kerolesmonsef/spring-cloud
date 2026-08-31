@@ -24,7 +24,7 @@
 
 ## Phase 4.5: More everyday mediators
 - [ ] `enrich` — preserve original payload before reshaping
-- [ ] `foreach` — loop array response, transform each item
+- [x] `foreach` — loop array response, transform each item
 - [ ] `validate` — reject malformed request body
 - [ ] `dblookup` — read from a DB in-flow
 - [ ] Reusable named `sequence` — extract shared fault-handling logic

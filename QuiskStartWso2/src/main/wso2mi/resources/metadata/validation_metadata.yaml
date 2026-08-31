@@ -1,0 +1,10 @@
+---
+key: "validation-1.0.0"
+name : "validation"
+displayName : "validation"
+description: "validation"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/validation"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

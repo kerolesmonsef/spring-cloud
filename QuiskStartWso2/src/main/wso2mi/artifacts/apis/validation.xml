@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/validation" name="validation" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST" uri-template="/">
+        <inSequence>
+            <validate cache-schema="true">
+                <schema key="gov:mi-resources/json/user.json"/>
+                <on-fail>
+                    <property name="validationError" expression="get-property('ERROR_MESSAGE')"/>
+                    <payloadFactory media-type="json">
+                        <format>{"error": "$1"}</format>
+                        <args>
+                            <arg expression="get-property('validationError')"/>
+                        </args>
+                    </payloadFactory>
+                    <property name="HTTP_SC" value="400" scope="axis2"/>
+                    <respond/>
+                </on-fail>
+            </validate>
+            <payloadFactory media-type="json">
+                <format>{"message": "valid request", "received": $1}</format>
+                <args>
+                    <arg expression="$body"/>
+                </args>
+            </payloadFactory>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <payloadFactory media-type="json">
+                <format>{"error": "invalid or empty request body"}</format>
+            </payloadFactory>
+            <property name="HTTP_SC" value="400" scope="axis2"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

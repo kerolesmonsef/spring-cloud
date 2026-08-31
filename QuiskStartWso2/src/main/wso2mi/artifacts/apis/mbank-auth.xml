@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api name="mbank-auth" context="/mbank-auth" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST" uri-template="/">
+        <inSequence>
+            <call>
+                <endpoint key="mbank-login"/>
+            </call>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>after token</message>
+                <property name="payload" expression="${payload}"/>
+            </log>
+            <validate cache-schema="true">
+                <schema key="gov:mi-resources/json/token.json"/>
+                <on-fail>
+                    <property name="validationError" expression="get-property('ERROR_MESSAGE')"/>
+                    <payloadFactory media-type="json">
+                        <format>{"error": "$1"}</format>
+                        <args>
+                            <arg expression="get-property('validationError')"/>
+                        </args>
+                    </payloadFactory>
+                    <property name="HTTP_SC" value="400" scope="axis2"/>
+                    <respond/>
+                </on-fail>
+            </validate>
+            <property name="token" scope="default" type="STRING" expression="${payload.token}"/>
+            <header name="Authorization" action="set" scope="transport" expression="fn:concat('Bearer ', get-property('token'))"/>
+            <call>
+                <endpoint key="mbank-auth-data"/>
+            </call>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>after get data</message>
+                <property name="payload" expression="${payload}"/>
+            </log>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+        </faultSequence>
+    </resource>
+</api>

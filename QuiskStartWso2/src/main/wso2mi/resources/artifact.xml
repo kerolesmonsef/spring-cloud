@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<artifacts>
+  <artifact name="resources_json_user_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>user.json</file>
+      <path>/_system/governance/mi-resources/json</path>
+      <mediaType>application/json</mediaType>
+      <properties></properties>
+    </item>
+  </artifact>
+  <artifact name="resources_json_user_form_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>user_form.json</file>
+      <path>/_system/governance/mi-resources/json</path>
+      <mediaType>application/json</mediaType>
+      <properties/>
+    </item>
+  </artifact>
+  <artifact name="resources_json_token_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>token.json</file>
+      <path>/_system/governance/mi-resources/json</path>
+      <mediaType>application/json</mediaType>
+      <properties/>
+    </item>
+  </artifact>
+</artifacts>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/learn-property" name="learn-property" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <property name="msg" scope="default" type="STRING" value="hello from property"/>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "message": "${properties.synapse.msg}" }</format>
+            </payloadFactory>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+        </faultSequence>
+    </resource>
+    <resource methods="POST" uri-template="/">
+        <inSequence>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{"message":"hi"}</format>
+            </payloadFactory>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+        </faultSequence>
+    </resource>
+</api>

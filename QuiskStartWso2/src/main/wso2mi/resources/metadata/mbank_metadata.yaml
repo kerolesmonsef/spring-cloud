@@ -1,0 +1,10 @@
+---
+key: "mbank-1.0.0"
+name : "mbank"
+displayName : "mbank"
+description: "mbank"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/mbank"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

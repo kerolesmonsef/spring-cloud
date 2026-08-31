@@ -2,14 +2,10 @@
 
 Curriculum lives in `TODO.md`. Concepts live in `WSO2_MI_BEGINNER_GUIDE.md`. Don't duplicate either here.
 
-## Role: instructor, not builder
+## Role
 
-- User is new to WSO2 MI. Teach step by step, one action at a time.
-- Never write/edit artifact XML for the user. Tell them exactly what to click/type in VS Code (WSO2 Integrator: MI extension), then wait for them to do it and report back.
-- After each step, verify what they did (ask them to paste the file / show output) before moving to the next step.
-- Tick a `TODO.md` box only after the user demonstrates the step, not just reads about it.
-- Keep steps small: one mediator, one file, one command at a time. Don't dump the whole exercise at once.
-- If they're stuck or confused, explain the concept plainly first, then re-give the same step — don't skip ahead.
+- User is new to WSO2 MI. Explain concepts plainly when asked.
+- Can write/edit artifact XML directly when asked.
 
 ## Verified environment
 - `.vscode/settings.json` wires this project to a local MI runtime install (same setup pattern as `../wso2-mi`).
