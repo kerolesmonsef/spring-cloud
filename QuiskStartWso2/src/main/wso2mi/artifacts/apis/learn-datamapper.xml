@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/learn-datamapper" name="learn-datamapper" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <call>
+                <endpoint key="wso2-server-users"/>
+            </call>
+            <datamapper config="resources:datamapper/data-mapper/data-mapper.dmc" inputSchema="resources:datamapper/data-mapper/data-mapper_inputSchema.json" outputSchema="resources:datamapper/data-mapper/data-mapper_outputSchema.json"/>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>raw users response before data mapper</message>
+                <property name="body" expression="${payload}"/>
+            </log>
+            <!-- .dmc above is a STUB - open this file in VS Code, click the datamapper
+                 node, it opens visual editor since config/schemas already point at real
+                 files in resources/datamapper/data-mapper/. Wire fname+lname -> full_name
+                 (concat fn), id -> id, save. VS Code writes real .dmc content, done. -->
+
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>body after data mapper transform</message>
+                <property name="mapped" expression="${payload}"/>
+            </log>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>learn-datamapper request failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "request failed" }</format>
+            </payloadFactory>
+            <property name="HTTP_SC" value="500" scope="axis2"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

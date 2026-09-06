@@ -1,0 +1,10 @@
+---
+key: "learn-datamapper-1.0.0"
+name : "learn-datamapper"
+displayName : "learn-datamapper"
+description: "learn-datamapper"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/learn-datamapper"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

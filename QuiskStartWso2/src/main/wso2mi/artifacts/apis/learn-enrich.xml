@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/learn-enrich" name="learn-enrich" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="GET" uri-template="/">
+        <inSequence>
+            <call>
+                <endpoint key="wso2-server-users"/>
+            </call>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>raw users response from backend</message>
+                <property name="body" expression="${payload}"/>
+            </log>
+
+            <!-- scalar derived value - property's job, computed while payload is still raw -->
+            <property name="userCount" expression="${payload.users.length()}"/>
+
+            <!-- stash the untouched backend response before we destroy it below -->
+            <enrich>
+                <source type="body" clone="true"/>
+                <target type="property" property="originalUsers"/>
+            </enrich>
+
+            <!-- destructive transform, just to prove we actually lost the original -->
+            <foreach collection="${payload.users}" parallel-execution="false" update-original="true" continue-without-aggregation="false">
+                <sequence>
+                    <payloadFactory media-type="json" template-type="default">
+                        <format>{ "id": ${payload.id}, "full_name": "${payload.fname} ${payload.lname}" }</format>
+                    </payloadFactory>
+                </sequence>
+            </foreach>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>body after destructive transform (original is gone from ${payload} now)</message>
+                <property name="transformed" expression="${payload}"/>
+            </log>
+
+            <!-- enrich's real superpower: restore the whole saved part back into the message body,
+                 no manual JSON rebuild needed -->
+            <enrich>
+                <source type="property" property="originalUsers"/>
+                <target type="body"/>
+            </enrich>
+
+            <!-- attach the earlier scalar as a response header - property's job again -->
+            <header name="X-User-Count" scope="transport" expression="get-property('userCount')"/>
+
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>final response - raw body restored via enrich, count via property</message>
+            </log>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+            <log category="ERROR" logMessageID="false" logFullPayload="false">
+                <message>learn-enrich request failed</message>
+                <property name="errorMessage" expression="get-property('ERROR_MESSAGE')"/>
+                <property name="errorDetail" expression="get-property('ERROR_DETAIL')"/>
+                <property name="errorCode" expression="get-property('ERROR_CODE')"/>
+            </log>
+            <payloadFactory media-type="json" template-type="default">
+                <format>{ "error": "request failed" }</format>
+            </payloadFactory>
+            <property name="HTTP_SC" value="500" scope="axis2"/>
+            <respond/>
+        </faultSequence>
+    </resource>
+</api>

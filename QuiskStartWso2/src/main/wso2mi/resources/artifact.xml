@@ -13,7 +13,7 @@
       <file>user_form.json</file>
       <path>/_system/governance/mi-resources/json</path>
       <mediaType>application/json</mediaType>
-      <properties/>
+      <properties></properties>
     </item>
   </artifact>
   <artifact name="resources_json_token_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
@@ -21,6 +21,30 @@
       <file>token.json</file>
       <path>/_system/governance/mi-resources/json</path>
       <mediaType>application/json</mediaType>
+      <properties></properties>
+    </item>
+  </artifact>
+  <artifact name="resources_datamapper_data-mapper_data-mapper_dmc" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>data-mapper.dmc</file>
+      <path>/_system/governance/mi-resources/datamapper/data-mapper</path>
+      <mediaType>text/plain</mediaType>
+      <properties></properties>
+    </item>
+  </artifact>
+  <artifact name="resources_datamapper_data-mapper_data-mapper_inputSchema_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>data-mapper_inputSchema.json</file>
+      <path>/_system/governance/mi-resources/datamapper/data-mapper</path>
+      <mediaType>text/plain</mediaType>
+      <properties></properties>
+    </item>
+  </artifact>
+  <artifact name="resources_datamapper_data-mapper_data-mapper_outputSchema_json" groupId="com.microintegrator.projects" version="1.0.0" type="registry/resource" serverRole="EnterpriseIntegrator">
+    <item>
+      <file>data-mapper_outputSchema.json</file>
+      <path>/_system/governance/mi-resources/datamapper/data-mapper</path>
+      <mediaType>text/plain</mediaType>
       <properties/>
     </item>
   </artifact>

@@ -1,0 +1,10 @@
+---
+key: "learn-enrich-1.0.0"
+name : "learn-enrich"
+displayName : "learn-enrich"
+description: "learn-enrich"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/learn-enrich"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

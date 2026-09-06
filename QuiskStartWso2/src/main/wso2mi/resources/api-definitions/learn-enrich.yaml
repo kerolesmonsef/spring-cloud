@@ -1,0 +1,14 @@
+openapi: 3.0.1
+info:
+  title: learn-enrich
+  description: API Definition of learn-enrich
+  version: 1.0.0
+servers:
+  - url: http://localhost:8290/learn-enrich
+  - url: https://localhost:8253/learn-enrich
+paths:
+  /:
+    get:
+      responses:
+        default:
+          description: Default response

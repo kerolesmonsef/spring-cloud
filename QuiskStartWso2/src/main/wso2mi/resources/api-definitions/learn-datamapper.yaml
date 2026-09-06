@@ -1,0 +1,14 @@
+openapi: 3.0.1
+info:
+  title: learn-datamapper
+  description: API Definition of learn-datamapper
+  version: 1.0.0
+servers:
+  - url: http://localhost:8290/learn-datamapper
+  - url: https://localhost:8253/learn-datamapper
+paths:
+  /:
+    get:
+      responses:
+        default:
+          description: Default response
