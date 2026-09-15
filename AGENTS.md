@@ -80,8 +80,9 @@
 | 8003 | SSO                              | [`SSO/src/main/resources/application.properties`](SSO/src/main/resources/application.properties) |
 | 8092 | wso2 (backend fronted by WSO2 AM) | [`wso2/src/main/resources/application.properties`](wso2-client/src/main/resources/application.properties) |
 | 8093 | wso2-server (JWT/SQLite demo backend) | [`wso2-server/src/main/resources/application.properties`](wso2-server/src/main/resources/application.properties) |
+| 8094 | soap-server (SOAP/SQLite user CRUD demo) | [`soap-server/src/main/resources/application.properties`](soap-server/src/main/resources/application.properties) |
 
-> **Next available port suggestion:** `8093+` (for additional client-facing services).
+> **Next available port suggestion:** `8094+` (for additional client-facing services).
 
 ---
 
