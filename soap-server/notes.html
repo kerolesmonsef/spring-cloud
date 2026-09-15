@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SOAP Review Notes</title>
+<style>
+  :root{color-scheme: light dark;}
+  body{
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height: 1.55;
+    background: light-dark(#fafafa, #1b1b1b);
+    color: light-dark(#222, #ddd);
+  }
+  h1{border-bottom: 2px solid #888; padding-bottom: .3rem;}
+  h2{margin-top: 2rem; color: light-dark(#0b5, #6f6);}
+  code{
+    background: light-dark(#eee, #333);
+    padding: .1rem .35rem;
+    border-radius: 4px;
+    font-size: .9em;
+  }
+  ul{padding-left: 1.3rem;}
+  li{margin: .3rem 0;}
+  .tag{
+    display:inline-block;
+    background: light-dark(#eef, #223);
+    border-radius: 4px;
+    padding: .05rem .4rem;
+    font-size: .85em;
+  }
+  .note{
+    border-left: 3px solid #888;
+    padding-left: .8rem;
+    color: light-dark(#555, #aaa);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>SOAP Review Notes</h1>
+<p class="note">Quick mind-bookmarks only. Not a tutorial — see <code>todo.md</code> for that.</p>
+
+<h2>Rule of thumb (XSD)</h2>
+<ul>
+  <li><strong>Everything used as a request/response/DTO must exist in the <code>.xsd</code> first.</strong> XSD = contract. Java classes (wsdl/request/response) mirror it, not the other way round.</li>
+  <li>XSD holds two kinds of tags:
+    <ul>
+      <li><code>xs:complexType</code> — the shape (fields, order). Named = reusable (<code>ref=</code>), anonymous = one-off.</li>
+      <li><code>xs:element</code> — the nameable tag pluggable into a type.</li>
+    </ul>
+  </li>
+  <li>Per CRUD op: 1 request element + 1 response element. Named type only when shape reused (e.g. <code>user</code>).</li>
+</ul>
+
+<h2>Types allowed inside XSD</h2>
+<ul>
+  <li>Primitives: <span class="tag">xs:string</span> <span class="tag">xs:long</span> <span class="tag">xs:int</span> <span class="tag">xs:boolean</span> <span class="tag">xs:dateTime</span> <span class="tag">xs:date</span> <span class="tag">xs:decimal</span></li>
+  <li>Structure: <code>xs:sequence</code> (ordered), <code>xs:choice</code>, <code>xs:all</code></li>
+  <li>Cardinality: <code>minOccurs</code>, <code>maxOccurs="unbounded"</code></li>
+  <li>Validation only (no logic): <code>xs:pattern</code>, <code>xs:minLength</code>, <code>xs:enumeration</code> — not used yet in <code>users.xsd</code></li>
+</ul>
+
+<h2><code>users.xsd</code> review</h2>
+<ul>
+  <li>1 shared type: <code>user</code> (id, name, email)</li>
+  <li>5 ops: get / list / create / update / delete — each own request+response</li>
+  <li><code>createUserRequest</code> has no <code>id</code> (server-assigned)</li>
+  <li><code>update</code>/<code>deleteResponse</code> → just <code>success: boolean</code>, no object returned</li>
+  <li><code>listUsersRequest</code> → empty complexType (no fields, just a marker)</li>
+</ul>
+
+</body>
+</html>
