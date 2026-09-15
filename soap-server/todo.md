@@ -56,6 +56,10 @@ Assign a port when you add the Boot app (check/update Used Ports table in root `
 - [ ] No new dependency needed (JPA/JAXB/Spring-WS already in `build.gradle`) unless posts need a different DB/dialect.
 - [ ] Test via curl SOAP POST to `/ws` with the new operation's XML body.
 
+## Pagination
+
+- [ ] Learn: how to add pagination to a SOAP list operation.
+
 ## Reference
 
 - Official guide: https://spring.io/guides/gs/producing-web-service
