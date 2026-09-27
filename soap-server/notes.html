@@ -38,6 +38,17 @@
     color: light-dark(#555, #aaa);
     font-style: italic;
   }
+  table{
+    border-collapse: collapse;
+    width: 100%;
+    margin: .5rem 0;
+  }
+  th, td{
+    border: 1px solid light-dark(#ccc, #444);
+    padding: .4rem .6rem;
+    text-align: left;
+  }
+  th{background: light-dark(#eef, #223);}
 </style>
 </head>
 <body>
@@ -73,6 +84,16 @@
   <li><code>update</code>/<code>deleteResponse</code> → just <code>success: boolean</code>, no object returned</li>
   <li><code>listUsersRequest</code> → empty complexType (no fields, just a marker)</li>
 </ul>
+
+<h2>REST vs SOAP annotation mapping</h2>
+<table>
+  <tr><th>REST (Spring MVC)</th><th>SOAP (Spring-WS)</th><th>Role</th></tr>
+  <tr><td><code>@RestController</code></td><td><code>@Endpoint</code></td><td>request handler bean</td></tr>
+  <tr><td><code>@RequestMapping</code>/<code>@PostMapping("/path")</code></td><td><code>@PayloadRoot(namespace, localPart)</code></td><td>routing (URL+verb vs XML namespace+element name)</td></tr>
+  <tr><td><code>@RequestBody</code></td><td><code>@RequestPayload</code></td><td>deserialize incoming body</td></tr>
+  <tr><td><code>@ResponseBody</code> (implicit)</td><td><code>@ResponsePayload</code></td><td>serialize return value</td></tr>
+</table>
+<p class="note">REST: many URLs, routed by path+verb. SOAP: one URL (<code>/ws</code>), always POST, routed by which <code>&lt;xxxRequest&gt;</code> element sits inside <code>&lt;soap:Body&gt;</code>.</p>
 
 </body>
 </html>

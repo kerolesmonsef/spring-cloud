@@ -37,4 +37,19 @@ public class WebServiceConfig {
     public XsdSchema usersSchema() {
         return new SimpleXsdSchema(new ClassPathResource("users.xsd"));
     }
+
+    @Bean(name = "posts")
+    public DefaultWsdl11Definition postsWsdl11Definition(XsdSchema postsSchema) {
+        DefaultWsdl11Definition wsdl11Definition = new DefaultWsdl11Definition();
+        wsdl11Definition.setPortTypeName("PostsPort");
+        wsdl11Definition.setLocationUri("/ws");
+        wsdl11Definition.setTargetNamespace("http://keroles.com/soapserver/posts");
+        wsdl11Definition.setSchema(postsSchema);
+        return wsdl11Definition;
+    }
+
+    @Bean
+    public XsdSchema postsSchema() {
+        return new SimpleXsdSchema(new ClassPathResource("posts.xsd"));
+    }
 }
