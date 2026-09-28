@@ -95,5 +95,47 @@
 </table>
 <p class="note">REST: many URLs, routed by path+verb. SOAP: one URL (<code>/ws</code>), always POST, routed by which <code>&lt;xxxRequest&gt;</code> element sits inside <code>&lt;soap:Body&gt;</code>.</p>
 
+<h2>New SOAP API checklist (with examples from this repo)</h2>
+<ul>
+  <li><strong>1. Contract-first — write XSD before Java.</strong> <code>users.xsd</code>:
+    <pre><code>&lt;xs:element name="user" type="tns:user"/&gt;
+&lt;xs:complexType name="user"&gt;
+  &lt;xs:sequence&gt;
+    &lt;xs:element name="id" type="xs:long"/&gt;
+    &lt;xs:element name="name" type="xs:string"/&gt;
+    &lt;xs:element name="email" type="xs:string"/&gt;
+  &lt;/xs:sequence&gt;
+&lt;/xs:complexType&gt;</code></pre>
+    Named type = reusable (<code>ref="tns:user"</code>). Per op: 1 request + 1 response element.
+  </li>
+  <li><strong>2. One namespace per domain.</strong> Users → <code>http://keroles.com/soapserver/users</code>, Posts → <code>http://keroles.com/soapserver/posts</code> (separate <code>posts.xsd</code>). Stops element-name collisions across domains.</li>
+  <li><strong>3. Config bean pair per domain</strong> (<code>WebServiceConfig.java</code>):
+    <pre><code>@Bean(name = "users")
+public DefaultWsdl11Definition defaultWsdl11Definition(XsdSchema usersSchema) {
+    DefaultWsdl11Definition d = new DefaultWsdl11Definition();
+    d.setPortTypeName("UsersPort");
+    d.setLocationUri("/ws");
+    d.setTargetNamespace("http://keroles.com/soapserver/users");
+    d.setSchema(usersSchema);
+    return d;
+}</code></pre>
+    Bean name <code>"users"</code> → WSDL served at <code>/ws/users.wsdl</code>.
+  </li>
+  <li><strong>4. Endpoint class, 1:1 op → method</strong> (<code>UserEndpoint.java</code>):
+    <pre><code>@PayloadRoot(namespace = NAMESPACE, localPart = "getUserRequest")
+@ResponsePayload
+public GetUserResponse getUser(@RequestPayload GetUserRequest request) {
+    GetUserResponse response = new GetUserResponse();
+    userService.findById(request.getId()).ifPresent(user -&gt; response.setUser(toXml(user)));
+    return response;
+}</code></pre>
+    Routing key = XML element name inside <code>&lt;soap:Body&gt;</code>, not URL. <code>PostEndpoint.java</code> mirrors this for posts — template for any new resource.
+  </li>
+  <li><strong>5. Validation in XSD, not code.</strong> Missing in <code>users.xsd</code> — no <code>xs:pattern</code>/<code>minLength</code>. Real API: constrain in the schema itself, e.g. <code>xs:pattern value=".+@.+"</code> on email, so bad input is rejected before it hits endpoint code.</li>
+  <li><strong>6. SOAP faults.</strong> Not present here — <code>getUser</code> with bad id just returns a response with no <code>user</code> set (silent, not prod-grade). Add <code>@SoapFault</code> on a thrown exception, or a <code>SoapFaultMappingExceptionResolver</code> bean, so errors come back as proper SOAP faults.</li>
+  <li><strong>7. Versioning.</strong> Contract change (new required field etc.) → new namespace or new XSD version. Old clients are bound tight to the WSDL they first read.</li>
+  <li><strong>8. Security.</strong> Not present here. WS-Security (<code>Wss4jSecurityInterceptor</code> bean) for signing/encryption, or simpler: HTTPS + basic-auth interceptor in front of <code>/ws/*</code>.</li>
+</ul>
+
 </body>
 </html>

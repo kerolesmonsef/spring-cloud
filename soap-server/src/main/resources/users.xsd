@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What goes in this file (contract only, no logic):
+  - Shared domain complexType (e.g. "user") = the DTO shape exposed over wire. Mirrors what UserXml (wsdl mapper class) carries, NOT the JPA entity.
+  - Per CRUD op: 1 request element + 1 response element (getXRequest/Response, createXRequest/Response, etc). These become the generated Request/Response Java classes (Endpoint's @RequestPayload/@ResponsePayload types).
+  - Validation constraints (xs:pattern, minLength, enumeration) belong here too, not in Java.
+  Does NOT belong here: JPA entity (User.java/model), repository, service, endpoint routing (@PayloadRoot), WSDL beans (WebServiceConfig). Those are separate Java layers that map to/from these XSD types.
+-->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://keroles.com/soapserver/users" targetNamespace="http://keroles.com/soapserver/users" elementFormDefault="qualified">
 
     <xs:element name="user" type="tns:user"/>
