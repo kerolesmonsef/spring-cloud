@@ -49,6 +49,19 @@
     text-align: left;
   }
   th{background: light-dark(#eef, #223);}
+  pre{
+    background: light-dark(#f0f0f0, #262626);
+    padding: .6rem .8rem;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  pre code{background: none; padding: 0;}
+  .ex{
+    display:block;
+    margin-top: .4rem;
+    font-size: .85em;
+    color: light-dark(#0b5, #6f6);
+  }
 </style>
 </head>
 <body>
@@ -58,31 +71,109 @@
 
 <h2>Rule of thumb (XSD)</h2>
 <ul>
-  <li><strong>Everything used as a request/response/DTO must exist in the <code>.xsd</code> first.</strong> XSD = contract. Java classes (wsdl/request/response) mirror it, not the other way round.</li>
+  <li><strong>Everything used as a request/response/DTO must exist in the <code>.xsd</code> first.</strong> XSD = contract. Java classes (wsdl/request/response) mirror it, not the other way round.
+    <span class="ex">Example: <code>UserEndpoint#getUser</code> takes <code>GetUserRequest</code> — XSD first, Java mirror second (<code>users.xsd</code>):</span>
+    <pre><code>&lt;xs:element name="getUserRequest"&gt;
+    &lt;xs:complexType&gt;
+        &lt;xs:sequence&gt;
+            &lt;xs:element name="id" type="xs:long"/&gt;
+        &lt;/xs:sequence&gt;
+    &lt;/xs:complexType&gt;
+&lt;/xs:element&gt;</code></pre>
+    Java mirror (<code>user/request/GetUserRequest.java</code>) — same element name, same field:
+    <pre><code>@Data
+@XmlRootElement(name = "getUserRequest")
+public class GetUserRequest {
+    private long id;
+}</code></pre>
+    Response side, XSD (<code>getUserResponse</code>) then Java (<code>user/response/GetUserResponse.java</code>):
+    <pre><code>&lt;xs:element name="getUserResponse"&gt;
+    &lt;xs:complexType&gt;
+        &lt;xs:sequence&gt;
+            &lt;xs:element ref="tns:user" minOccurs="0"/&gt;
+        &lt;/xs:sequence&gt;
+    &lt;/xs:complexType&gt;
+&lt;/xs:element&gt;</code></pre>
+    <pre><code>@Data
+@XmlRootElement(name = "getUserResponse")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class GetUserResponse {
+    @XmlElement(name = "user")
+    private UserXml user;
+}</code></pre>
+    Mapping: <code>ref="tns:user" minOccurs="0"</code> → single nullable <code>UserXml user</code> field (null = element omitted). Endpoint uses both:
+    <pre><code>@PayloadRoot(namespace = NAMESPACE, localPart = "getUserRequest")
+@ResponsePayload
+public GetUserResponse getUser(@RequestPayload GetUserRequest request) { ... }</code></pre>
+  </li>
   <li>XSD holds two kinds of tags:
     <ul>
-      <li><code>xs:complexType</code> — the shape (fields, order). Named = reusable (<code>ref=</code>), anonymous = one-off.</li>
-      <li><code>xs:element</code> — the nameable tag pluggable into a type.</li>
+      <li><code>xs:complexType</code> — the shape (fields, order). Named = reusable (<code>ref=</code>), anonymous = one-off.
+        <span class="ex">Example: named <code>user</code> type (reused by get/list/create responses) vs anonymous type inside <code>getUserRequest</code> (one-off):</span>
+        <pre><code>&lt;xs:complexType name="user"&gt;          &lt;!-- named: reusable --&gt;
+    &lt;xs:sequence&gt;
+        &lt;xs:element name="id" type="xs:long"/&gt;
+        &lt;xs:element name="name" type="xs:string"/&gt;
+        &lt;xs:element name="email" type="xs:string"/&gt;
+    &lt;/xs:sequence&gt;
+&lt;/xs:complexType&gt;</code></pre>
+        Java mirror: <code>@XmlType(name = "user") public class UserXml</code> (<code>user/wsdl/UserXml.java</code>).
+      </li>
+      <li><code>xs:element</code> — the nameable tag pluggable into a type.
+        <span class="ex">Example: <code>user</code> element wraps the <code>user</code> type so other types can <code>ref</code> it:</span>
+        <pre><code>&lt;xs:element name="user" type="tns:user"/&gt;
+...
+&lt;xs:element ref="tns:user" minOccurs="0" maxOccurs="unbounded"/&gt;   &lt;!-- in listUsersResponse --&gt;</code></pre>
+      </li>
     </ul>
   </li>
-  <li>Per CRUD op: 1 request element + 1 response element. Named type only when shape reused (e.g. <code>user</code>).</li>
+  <li>Per CRUD op: 1 request element + 1 response element. Named type only when shape reused (e.g. <code>user</code>).
+    <span class="ex">Example: <code>deleteUserRequest</code> + <code>deleteUserResponse</code> in <code>users.xsd</code>; only <code>user</code> is a named type because 3 responses share it. Endpoint pair: <code>DeleteUserRequest</code> in → <code>DeleteUserResponse</code> out.</span>
+  </li>
 </ul>
 
 <h2>Types allowed inside XSD</h2>
 <ul>
-  <li>Primitives: <span class="tag">xs:string</span> <span class="tag">xs:long</span> <span class="tag">xs:int</span> <span class="tag">xs:boolean</span> <span class="tag">xs:dateTime</span> <span class="tag">xs:date</span> <span class="tag">xs:decimal</span></li>
-  <li>Structure: <code>xs:sequence</code> (ordered), <code>xs:choice</code>, <code>xs:all</code></li>
-  <li>Cardinality: <code>minOccurs</code>, <code>maxOccurs="unbounded"</code></li>
-  <li>Validation only (no logic): <code>xs:pattern</code>, <code>xs:minLength</code>, <code>xs:enumeration</code> — not used yet in <code>users.xsd</code></li>
+  <li>Primitives: <span class="tag">xs:string</span> <span class="tag">xs:long</span> <span class="tag">xs:int</span> <span class="tag">xs:boolean</span> <span class="tag">xs:dateTime</span> <span class="tag">xs:date</span> <span class="tag">xs:decimal</span>
+    <span class="ex">Used here: <code>xs:long</code> → Java <code>long id</code> (<code>getUserRequest</code>, <code>user</code>); <code>xs:string</code> → <code>String name/email</code>; <code>xs:boolean</code> → <code>success</code> in <code>updateUserResponse</code>/<code>deleteUserResponse</code>. Not used yet: int, dateTime, date, decimal.</span>
+  </li>
+  <li>Structure: <code>xs:sequence</code> (ordered), <code>xs:choice</code>, <code>xs:all</code>
+    <span class="ex">Used here: only <code>xs:sequence</code> — <code>updateUserRequest</code> must send <code>id</code>, <code>name</code>, <code>email</code> in that order, else schema-invalid:</span>
+    <pre><code>&lt;xs:sequence&gt;
+    &lt;xs:element name="id" type="xs:long"/&gt;
+    &lt;xs:element name="name" type="xs:string"/&gt;
+    &lt;xs:element name="email" type="xs:string"/&gt;
+&lt;/xs:sequence&gt;</code></pre>
+  </li>
+  <li>Cardinality: <code>minOccurs</code>, <code>maxOccurs="unbounded"</code>
+    <span class="ex">Example: <code>getUserResponse</code> → <code>minOccurs="0"</code> (user may be absent) → Java single <code>UserXml</code>, null if not found. <code>listUsersResponse</code> → <code>maxOccurs="unbounded"</code> → Java <code>List&lt;UserXml&gt; user = new ArrayList&lt;&gt;()</code>. <code>createUserResponse</code> → default 1..1 → always set.</span>
+  </li>
+  <li>Validation only (no logic): <code>xs:pattern</code>, <code>xs:minLength</code>, <code>xs:enumeration</code> — not used yet in <code>users.xsd</code>
+    <span class="ex">Would go on <code>createUserRequest</code>'s <code>email</code> — see "Validation in XSD" below for the snippet.</span>
+  </li>
 </ul>
 
 <h2><code>users.xsd</code> review</h2>
 <ul>
-  <li>1 shared type: <code>user</code> (id, name, email)</li>
-  <li>5 ops: get / list / create / update / delete — each own request+response</li>
-  <li><code>createUserRequest</code> has no <code>id</code> (server-assigned)</li>
-  <li><code>update</code>/<code>deleteResponse</code> → just <code>success: boolean</code>, no object returned</li>
-  <li><code>listUsersRequest</code> → empty complexType (no fields, just a marker)</li>
+  <li>1 shared type: <code>user</code> (id, name, email)
+    <span class="ex">Example: <code>getUserResponse</code>, <code>listUsersResponse</code>, <code>createUserResponse</code> all <code>ref="tns:user"</code>; Java side all use <code>UserXml</code>, filled by <code>UserEndpoint.toXml(User)</code> (JPA entity → wire DTO, entity never exposed).</span>
+  </li>
+  <li>5 ops: get / list / create / update / delete — each own request+response
+    <span class="ex">Example: 5 <code>@PayloadRoot</code> methods in <code>UserEndpoint</code>, <code>localPart</code> = <code>getUserRequest</code>, <code>listUsersRequest</code>, <code>createUserRequest</code>, <code>updateUserRequest</code>, <code>deleteUserRequest</code>.</span>
+  </li>
+  <li><code>createUserRequest</code> has no <code>id</code> (server-assigned)
+    <span class="ex">Example: request carries only <code>name</code>+<code>email</code>; id comes back in the response:</span>
+    <pre><code>response.setUser(toXml(userService.create(request.getName(), request.getEmail())));</code></pre>
+  </li>
+  <li><code>update</code>/<code>deleteResponse</code> → just <code>success: boolean</code>, no object returned
+    <span class="ex">Example: <code>UserService.delete(id)</code> returns <code>false</code> if <code>!existsById</code>, else deletes and returns <code>true</code>; endpoint does <code>response.setSuccess(userService.delete(request.getId()))</code>. Same for <code>update</code>.</span>
+  </li>
+  <li><code>listUsersRequest</code> → empty complexType (no fields, just a marker)
+    <span class="ex">Example: XSD <code>&lt;xs:element name="listUsersRequest"&gt;&lt;xs:complexType/&gt;&lt;/xs:element&gt;</code> ↔ Java, empty class, no fields, no Lombok:</span>
+    <pre><code>@XmlRootElement(name = "listUsersRequest")
+public class ListUsersRequest {
+}</code></pre>
+  </li>
 </ul>
 
 <h2>REST vs SOAP annotation mapping</h2>
@@ -94,22 +185,82 @@
   <tr><td><code>@ResponseBody</code> (implicit)</td><td><code>@ResponsePayload</code></td><td>serialize return value</td></tr>
 </table>
 <p class="note">REST: many URLs, routed by path+verb. SOAP: one URL (<code>/ws</code>), always POST, routed by which <code>&lt;xxxRequest&gt;</code> element sits inside <code>&lt;soap:Body&gt;</code>.</p>
+<p><span class="ex">Example: all four annotations together in this repo (<code>UserEndpoint</code>). REST equivalent: <code>@GetMapping("/users/{id}")</code> + <code>@PathVariable</code>.</span></p>
+<pre><code>@Endpoint                                                        // ~ @RestController
+public class UserEndpoint {
+    private static final String NAMESPACE = "http://keroles.com/soapserver/users";
+
+    @PayloadRoot(namespace = NAMESPACE, localPart = "getUserRequest") // ~ @PostMapping("/path")
+    @ResponsePayload                                                  // ~ @ResponseBody
+    public GetUserResponse getUser(@RequestPayload GetUserRequest request) { // ~ @RequestBody
+        ...
+    }
+}</code></pre>
+<p>Wire (what the client POSTs to <code>/ws</code>, routes to <code>getUser</code> because of the element inside <code>&lt;soap:Body&gt;</code>):</p>
+<pre><code>&lt;soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:us="http://keroles.com/soapserver/users"&gt;
+  &lt;soapenv:Body&gt;
+    &lt;us:getUserRequest&gt;
+      &lt;us:id&gt;1&lt;/us:id&gt;
+    &lt;/us:getUserRequest&gt;
+  &lt;/soapenv:Body&gt;
+&lt;/soapenv:Envelope&gt;</code></pre>
+<p class="note">Servlet mapping that makes it "one URL": <code>WebServiceConfig</code> registers <code>MessageDispatcherServlet</code> on <code>"/ws/*"</code>.</p>
 
 <h2>New SOAP API checklist (with examples from this repo)</h2>
+<p class="note">Worked example throughout: adding a new op <code>searchUsersByName</code> to the existing <code>users</code> domain (no new namespace needed — see step 3).</p>
 <ul>
-  <li><strong>1. Contract-first — write XSD before Java.</strong> <code>users.xsd</code>:
-    <pre><code>&lt;xs:element name="user" type="tns:user"/&gt;
-&lt;xs:complexType name="user"&gt;
-  &lt;xs:sequence&gt;
-    &lt;xs:element name="id" type="xs:long"/&gt;
-    &lt;xs:element name="name" type="xs:string"/&gt;
-    &lt;xs:element name="email" type="xs:string"/&gt;
-  &lt;/xs:sequence&gt;
-&lt;/xs:complexType&gt;</code></pre>
-    Named type = reusable (<code>ref="tns:user"</code>). Per op: 1 request + 1 response element.
+  <li><strong>1. XSD — add request/response elements.</strong> Contract first, in <code>users.xsd</code>:
+    <pre><code>&lt;xs:element name="searchUsersByNameRequest"&gt;
+  &lt;xs:complexType&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element name="name" type="xs:string"/&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+&lt;/xs:element&gt;
+&lt;xs:element name="searchUsersByNameResponse"&gt;
+  &lt;xs:complexType&gt;
+    &lt;xs:sequence&gt;
+      &lt;xs:element ref="tns:user" minOccurs="0" maxOccurs="unbounded"/&gt;
+    &lt;/xs:sequence&gt;
+  &lt;/xs:complexType&gt;
+&lt;/xs:element&gt;</code></pre>
+    Named type = reusable (<code>ref="tns:user"</code>). Per op: 1 request + 1 response element. Note: this xsd is <strong>not</strong> consumed by any xjc/codegen plugin in this repo (check <code>build.gradle</code> — only <code>wsdl4j</code> + <code>jaxb-runtime</code>, no generator) — it's contract documentation + WSDL schema source. Java DTOs below are hand-written to match it.
   </li>
-  <li><strong>2. One namespace per domain.</strong> Users → <code>http://keroles.com/soapserver/users</code>, Posts → <code>http://keroles.com/soapserver/posts</code> (separate <code>posts.xsd</code>). Stops element-name collisions across domains.</li>
-  <li><strong>3. Config bean pair per domain</strong> (<code>WebServiceConfig.java</code>):
+  <li><strong>2. Java DTOs — hand-write request/response classes.</strong>
+    <pre><code>// request/SearchUsersByNameRequest.java
+@Data
+@XmlRootElement(name = "searchUsersByNameRequest")
+public class SearchUsersByNameRequest {
+    private String name;
+}
+
+// response/SearchUsersByNameResponse.java
+@Data
+@XmlRootElement(name = "searchUsersByNameResponse")
+public class SearchUsersByNameResponse {
+    private List&lt;UserXml&gt; user = new ArrayList&lt;&gt;();
+}</code></pre>
+  </li>
+  <li><strong>3. Namespace check — reuse, don't duplicate.</strong> <code>request/package-info.java</code> already declares:
+    <pre><code>@XmlSchema(
+    namespace = "http://keroles.com/soapserver/users",
+    elementFormDefault = XmlNsForm.QUALIFIED)
+package com.keroles.soapserver.user.request;</code></pre>
+    New classes in same package inherit it automatically — no per-class namespace needed. Separate domain (e.g. <code>posts</code>) → separate package + own <code>package-info.java</code> + own namespace + own <code>NAMESPACE</code> constant in its endpoint (a single <code>@Endpoint</code> class <em>can</em> mix namespaces per-method via <code>@PayloadRoot</code>, but cleaner to split by domain — see <code>PostEndpoint.java</code>). Three copies of the same namespace string must stay in sync by hand: <code>package-info.java</code>, xsd <code>targetNamespace</code>, endpoint's <code>NAMESPACE</code> constant — nothing enforces this at compile time.
+  </li>
+  <li><strong>4. Endpoint method — route by namespace + localPart.</strong>
+    <pre><code>@PayloadRoot(namespace = NAMESPACE, localPart = "searchUsersByNameRequest")
+@ResponsePayload
+public SearchUsersByNameResponse searchUsersByName(@RequestPayload SearchUsersByNameRequest request) {
+    SearchUsersByNameResponse response = new SearchUsersByNameResponse();
+    userService.findByNameContaining(request.getName()).forEach(user -&gt; response.getUser().add(toXml(user)));
+    return response;
+}</code></pre>
+    <code>localPart</code> must equal the request's <code>@XmlRootElement(name=...)</code> exactly — mismatch here 404s even if namespace is right. Routing key = XML element name inside <code>&lt;soap:Body&gt;</code>, not URL.
+  </li>
+  <li><strong>5. Service logic.</strong> Add <code>findByNameContaining(String name)</code> to <code>UserService</code>, backed by a repo query. Business logic lives here, not in the endpoint.</li>
+  <li><strong>6. WSDL sanity check.</strong> Restart, hit <code>/ws/users.wsdl</code> — new elements should appear automatically since the WSDL bean (<code>WebServiceConfig.java</code>) points at <code>users.xsd</code> as its schema source:
     <pre><code>@Bean(name = "users")
 public DefaultWsdl11Definition defaultWsdl11Definition(XsdSchema usersSchema) {
     DefaultWsdl11Definition d = new DefaultWsdl11Definition();
@@ -119,22 +270,34 @@ public DefaultWsdl11Definition defaultWsdl11Definition(XsdSchema usersSchema) {
     d.setSchema(usersSchema);
     return d;
 }</code></pre>
-    Bean name <code>"users"</code> → WSDL served at <code>/ws/users.wsdl</code>.
+    Bean name <code>"users"</code> → WSDL served at <code>/ws/users.wsdl</code>. If new elements don't show up here, xsd wasn't saved/picked up — check before debugging the endpoint.
   </li>
-  <li><strong>4. Endpoint class, 1:1 op → method</strong> (<code>UserEndpoint.java</code>):
-    <pre><code>@PayloadRoot(namespace = NAMESPACE, localPart = "getUserRequest")
-@ResponsePayload
-public GetUserResponse getUser(@RequestPayload GetUserRequest request) {
-    GetUserResponse response = new GetUserResponse();
-    userService.findById(request.getId()).ifPresent(user -&gt; response.setUser(toXml(user)));
-    return response;
-}</code></pre>
-    Routing key = XML element name inside <code>&lt;soap:Body&gt;</code>, not URL. <code>PostEndpoint.java</code> mirrors this for posts — template for any new resource.
+</ul>
+
+<h2>Other gaps (not part of the add-an-op checklist)</h2>
+<ul>
+  <li><strong>Validation in XSD, not code.</strong> Missing in <code>users.xsd</code> — no <code>xs:pattern</code>/<code>minLength</code>. Real API: constrain in the schema itself, e.g. <code>xs:pattern value=".+@.+"</code> on email, so bad input is rejected before it hits endpoint code.
+    <span class="ex">Example: today <code>createUserRequest.email</code> is plain <code>xs:string</code>, so <code>email="abc"</code> is saved as-is by <code>UserService.create</code>. Fix (XSD only, no Java change):</span>
+    <pre><code>&lt;xs:element name="email"&gt;
+    &lt;xs:simpleType&gt;
+        &lt;xs:restriction base="xs:string"&gt;
+            &lt;xs:pattern value=".+@.+"/&gt;
+        &lt;/xs:restriction&gt;
+    &lt;/xs:simpleType&gt;
+&lt;/xs:element&gt;</code></pre>
+    <span class="ex">Caveat: Spring-WS only enforces the schema if a <code>PayloadValidatingInterceptor</code> is registered — none is in <code>WebServiceConfig</code> yet, so add one or the pattern is documentation only.</span>
   </li>
-  <li><strong>5. Validation in XSD, not code.</strong> Missing in <code>users.xsd</code> — no <code>xs:pattern</code>/<code>minLength</code>. Real API: constrain in the schema itself, e.g. <code>xs:pattern value=".+@.+"</code> on email, so bad input is rejected before it hits endpoint code.</li>
-  <li><strong>6. SOAP faults.</strong> Not present here — <code>getUser</code> with bad id just returns a response with no <code>user</code> set (silent, not prod-grade). Add <code>@SoapFault</code> on a thrown exception, or a <code>SoapFaultMappingExceptionResolver</code> bean, so errors come back as proper SOAP faults.</li>
-  <li><strong>7. Versioning.</strong> Contract change (new required field etc.) → new namespace or new XSD version. Old clients are bound tight to the WSDL they first read.</li>
-  <li><strong>8. Security.</strong> Not present here. WS-Security (<code>Wss4jSecurityInterceptor</code> bean) for signing/encryption, or simpler: HTTPS + basic-auth interceptor in front of <code>/ws/*</code>.</li>
+  <li><strong>SOAP faults.</strong> Not present here — <code>getUser</code> with bad id just returns a response with no <code>user</code> set (silent, not prod-grade). Add <code>@SoapFault</code> on a thrown exception, or a <code>SoapFaultMappingExceptionResolver</code> bean, so errors come back as proper SOAP faults.
+    <span class="ex">Example: current <code>UserEndpoint.getUser</code> — unknown id yields an empty <code>&lt;getUserResponse/&gt;</code>; same for <code>updateUser</code>/<code>deleteUser</code>, which report only <code>success=false</code>:</span>
+    <pre><code>userService.findById(request.getId()).ifPresent(user -&gt; response.setUser(toXml(user)));
+return response;   // not found → empty response, no fault</code></pre>
+  </li>
+  <li><strong>Versioning.</strong> Contract change (new required field etc.) → new namespace or new XSD version. Old clients are bound tight to the WSDL they first read.
+    <span class="ex">Example: making <code>user</code> require a new <code>phone</code> field would break every client. Instead publish <code>http://keroles.com/soapserver/users/v2</code>: new <code>targetNamespace</code> in the xsd, new <code>package-info.java</code>, new <code>NAMESPACE</code> constant. (Existing model: <code>users</code> vs <code>posts</code> already split by namespace, <code>posts.xsd</code> + <code>PostEndpoint</code>.)</span>
+  </li>
+  <li><strong>Security.</strong> Not present here. WS-Security (<code>Wss4jSecurityInterceptor</code> bean) for signing/encryption, or simpler: HTTPS + basic-auth interceptor in front of <code>/ws/*</code>.
+    <span class="ex">Example: <code>WebServiceConfig.messageDispatcherServlet</code> maps <code>/ws/*</code> with no auth — anyone can call <code>deleteUserRequest</code>. Hook point: add the interceptor via a <code>WsConfigurerAdapter.addInterceptors</code> bean, or filter <code>/ws/*</code> in a servlet filter.</span>
+  </li>
 </ul>
 
 </body>
