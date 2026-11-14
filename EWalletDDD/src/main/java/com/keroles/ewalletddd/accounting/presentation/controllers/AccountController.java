@@ -1,15 +1,11 @@
-package com.keroles.ewalletddd.accounting.presentation;
+package com.keroles.ewalletddd.accounting.presentation.controllers;
 
 import com.keroles.ewalletddd.accounting.application.AccountApplicationService;
 import com.keroles.ewalletddd.accounting.application.TransactionApplicationService;
-import com.keroles.ewalletddd.accounting.domain.model.Account;
-import com.keroles.ewalletddd.accounting.domain.valueObject.AccountId;
 import com.keroles.ewalletddd.accounting.domain.valueObject.AccountReference;
-import com.keroles.ewalletddd.accounting.presentation.requests.MoneyRequest;
 import com.keroles.ewalletddd.accounting.presentation.requests.OpenAccountRequest;
 import com.keroles.ewalletddd.accounting.presentation.responses.AccountResponse;
 import com.keroles.ewalletddd.shared.domain.Currency;
-import com.keroles.ewalletddd.shared.domain.Money;
 import com.keroles.ewalletddd.shared.domain.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

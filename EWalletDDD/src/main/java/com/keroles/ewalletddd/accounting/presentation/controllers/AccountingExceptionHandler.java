@@ -1,4 +1,4 @@
-package com.keroles.ewalletddd.accounting.presentation;
+package com.keroles.ewalletddd.accounting.presentation.controllers;
 
 import com.keroles.ewalletddd.accounting.domain.exception.InsufficientBalanceException;
 import org.springframework.http.HttpStatus;
