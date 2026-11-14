@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.keroles'
+version = '0.0.1-SNAPSHOT'
+description = 'Kafka learning module - labs for the 12-week roadmap in TODO.md'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    // Plain Kafka Java client (KafkaProducer / KafkaConsumer / AdminClient).
+    // Weeks 2-6 use this directly so you see what Spring Kafka hides later.
+    // Version is managed by the Spring Boot BOM.
+    implementation 'org.apache.kafka:kafka-clients'
+
+    // Added later in the roadmap (uncomment when you reach that week):
+    // implementation 'org.springframework.kafka:spring-kafka'   // Week 10 (Spring Boot saga)
+    // implementation 'org.apache.kafka:kafka-streams'           // Week 9
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

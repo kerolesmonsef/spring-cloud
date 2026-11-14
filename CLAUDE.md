@@ -21,6 +21,7 @@ A learning reference for Spring Cloud, **not** a production template. Each top-l
 - **ConfigServer** (:8888), **ConfigClient** (:8090), **LoadBalancer** (:8080 gateway + **LoadBalancerService1** :8001 / **LoadBalancerService2** :8002), **OpenFeign** (:8091) — implemented per README.
 - **SSO** (:8003) — OAuth2 resource server validating JWTs against a Keycloak realm at `http://localhost:8080/realms/my-sso-realm` (`SecurityConfig.java`, `DemoController.java`). Needs Keycloak running on :8080.
 - **ServiceDiscovery** (:8761) — intended Eureka server, but `build.gradle` has **no eureka dependency yet**; it's a bare Spring Boot scaffold. Add `spring-cloud-starter-netflix-eureka-server` before relying on it.
+- **Kafka** (:8096) — Kafka learning module: `Kafka/TODO.md` is the 12-week roadmap/tracker, `Kafka/AGENTS.md` the module guide. Gradle + Boot 4.1.1 + raw `kafka-clients`; broker via `Kafka/tools/docker-compose.*.yml` (`apache/kafka:4.3.1`). Lab code goes in `com.keroles.kafka.weekNN`.
 - **ddd** — JPA + webmvc scaffold (`DddApplication` only), no port assigned, not in README.
 
 When a module is a scaffold, treat README/AGENTS descriptions of it as the *intended* design, not current behavior — verify dependencies in `build.gradle` before assuming a feature exists.

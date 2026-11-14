@@ -4,20 +4,7 @@
 **Final result:** you can explain Kafka internals on a whiteboard, build and tune an exactly-once pipeline, and run a cluster through failures.
 
 ## Progress
-| Week | Topic | Status |
-|---|---|---|
-| 1 | Foundations & CLI | ☐ |
-| 2 | Producers & Consumers (Java) | ☐ |
-| 3 | Partitions, replication, ISR (3-node cluster) | ☐ |
-| 4 | Storage internals: segments, indexes, compaction | ☐ |
-| 5 | Consumer groups, offsets, rebalancing | ☐ |
-| 6 | Delivery semantics, idempotence, transactions | ☐ |
-| 7 | Schemas: Avro/Protobuf, Schema Registry | ☐ |
-| 8 | Kafka Connect & CDC (Debezium) | ☐ |
-| 9 | Kafka Streams | ☐ |
-| 10 | ksqlDB + event-driven patterns | ☐ |
-| 11 | Production: monitoring, tuning, security | ☐ |
-| 12 | Capstone project + failure drills | ☐ |
+Progress is tracked in **`../TODO.md`** (single tracker). This file is the reference for *what* each week covers and *why*.
 
 ---
 
@@ -25,12 +12,12 @@
 
 ### Week 1: Foundations & CLI
 - **Concepts:** event streaming vs queues (RabbitMQ), broker, topic, partition, offset, record (key/value/headers/timestamp), the commit log idea, retention. KRaft vs old ZooKeeper.
-- **Lab:** run `tools/docker-compose.single.yml`. Use `kafka-topics.sh`, `kafka-console-producer.sh`, `kafka-console-consumer.sh`. Create a topic with 3 partitions, produce keyed messages, and see that the same key always lands in the same partition (`--property print.partition=true`).
+- **Lab:** run `tools/docker-compose.single.yml`. Use `kafka-topics.sh`, `kafka-console-producer.sh`, `kafka-console-consumer.sh`. Create a topic with 3 partitions, produce keyed messages, and see that the same key always lands in the same partition (`--formatter-property print.partition=true`; Kafka 4.x renamed `--property`).
 - **Checkpoint:** explain why ordering is guaranteed only inside a partition. Draw topic → partitions → offsets.
 
 ### Week 2: Producers & Consumers (Java)
 - **Concepts:** `KafkaProducer` flow (serializer → partitioner → batching → send), `acks`, `linger.ms`, `batch.size`, `retries`, `compression.type`; `KafkaConsumer` poll loop, `auto.offset.reset`, commits.
-- **Lab:** a Maven project in `labs/week_02_clients/`. Write a producer and a consumer, then a custom partitioner. Measure throughput with `acks=0/1/all` and different `linger.ms`.
+- **Lab:** Java classes in package `com.keroles.kafka.week02` of this Gradle module. Write a producer and a consumer, then a custom partitioner. Measure throughput with `acks=0/1/all` and different `linger.ms`.
 - **Checkpoint:** what happens when `acks=all` and a broker is down? What is a producer batch?
 
 ## Phase 2 — Internals (Weeks 3–5)  *(your main focus)*

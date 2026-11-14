@@ -41,11 +41,13 @@
   - `cd OpenFeign && ./gradlew bootRun`
   - `cd ServiceDescovery && ./gradlew bootRun`
   - `cd wso2-server && ./gradlew bootRun`
+  - `cd Kafka && ./gradlew bootRun` (start the broker first: `docker compose -f Kafka/tools/docker-compose.single.yml up -d`)
 - Run tests from a module directory:
   - `cd ConfigServer && ./gradlew test`
   - `cd OpenFeign && ./gradlew test`
   - `cd ServiceDescovery && ./gradlew test`
   - `cd wso2-server && ./gradlew test`
+  - `cd Kafka && ./gradlew test` (no broker needed)
 - Committed tests are Spring context smoke tests in `ConfigServer/src/test/java/com/keroles/configserver/ConfigServerApplicationTests.java` and `OpenFeign/src/test/java/com/keroles/openfeign/OpenFeignApplicationTests.java`.
 
 ---
@@ -81,8 +83,11 @@
 | 8092 | wso2 (backend fronted by WSO2 AM) | [`wso2/src/main/resources/application.properties`](wso2-client/src/main/resources/application.properties) |
 | 8093 | wso2-server (JWT/SQLite demo backend) | [`wso2-server/src/main/resources/application.properties`](wso2-server/src/main/resources/application.properties) |
 | 8094 | soap-server (SOAP/SQLite user CRUD demo) | [`soap-server/src/main/resources/application.properties`](soap-server/src/main/resources/application.properties) |
+| 8096 | Kafka (learning module, see `Kafka/TODO.md`) | [`Kafka/src/main/resources/application.properties`](Kafka/src/main/resources/application.properties) |
+| 9092 | Kafka broker – single node (Docker, host port) | [`Kafka/tools/docker-compose.single.yml`](Kafka/tools/docker-compose.single.yml) |
+| 19092, 29092, 39092 | Kafka brokers 1–3 – cluster (Docker, host ports) | [`Kafka/tools/docker-compose.cluster.yml`](Kafka/tools/docker-compose.cluster.yml) |
 
-> **Next available port suggestion:** `8094+` (for additional client-facing services).
+> **Next available port suggestion:** `8097+` (8095 is reserved by `spring-dokcer/TODO.md`).
 
 ---
 
