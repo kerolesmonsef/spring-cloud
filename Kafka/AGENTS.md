@@ -21,7 +21,7 @@ Go from Kafka beginner to master: how Kafka works inside (topics, partitions, lo
 | `TODO.md` | **The single progress tracker.** Step-by-step checklist for all 12 weeks + results log. Tick boxes here. |
 | `workflows/learning_roadmap.md` | Reference: what each week covers and why (concepts, lab idea, checkpoint, master test). No progress tracking here. |
 | `workflows/study_session.md` | How one study session runs (explain → lab → quiz → notes). |
-| `tools/docker-compose.single.yml` | 1 broker (KRaft), weeks 1–2, 4. Host port `9092`. Data on a named volume at `/var/lib/kafka/data`. |
+| `tools/docker-compose.single.yml` | 1 broker (KRaft), weeks 1–2, 4. Host port `9092`. Data bind-mounted from `Kafka/data/` (git-ignored, `.gitkeep` kept) to `/var/lib/kafka/data`. Wipe with `down` + `rm -rf data/*`. |
 | `tools/docker-compose.cluster.yml` | 3 brokers (KRaft), weeks 3+. Host ports `19092`, `29092`, `39092`. No volumes (throwaway). |
 | `src/main/java/com/keroles/kafka/weekNN/` | Java code for week NN (one package per week). |
 | `labs/week_NN/` | Shell commands, lab write-ups, sample output for week NN. |
@@ -37,7 +37,8 @@ Go from Kafka beginner to master: how Kafka works inside (topics, partitions, lo
 
 ## Verified facts (tested 2026-11-14 on `apache/kafka:4.3.1`)
 - Both compose files start and work. Single node: topic create / keyed produce / consume OK. Cluster: RF=3 topic, stopping `kafka-2` moves leaders and shrinks ISR as expected.
-- The image's default `log.dirs` is `/tmp/kraft-combined-logs`; the single-node compose overrides it with `KAFKA_LOG_DIRS=/var/lib/kafka/data` so the volume is really used. Segment files appear under `/var/lib/kafka/data/<topic>-<partition>/`.
+- The image's default `log.dirs` is `/tmp/kraft-combined-logs`; the single-node compose overrides it with `KAFKA_LOG_DIRS=/var/lib/kafka/data` so data lands in the bind mount. Segment files appear under `/var/lib/kafka/data/<topic>-<partition>/` = host `Kafka/data/<topic>-<partition>/`.
+- Container user is `appuser` uid/gid 1000 → host `data/` must be writable by uid 1000 (`chmod 755` if owned by uid 1000).
 - CLI tools live at `/opt/kafka/bin/` inside the container (not on `PATH`).
 - Kafka 4.x console tools use `--reader-property` (producer) and `--formatter-property` (consumer) instead of the old `--property`.
 - Inside a cluster container, use the internal listener `kafka-N:9092`. `localhost:19092` etc. only work from the host.

@@ -18,8 +18,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_LOG_DIRS: /var/lib/kafka/data   # default is /tmp/kraft-combined-logs; point it at the volume so data survives restarts
+      KAFKA_LOG_DIRS: /var/lib/kafka/data   # default is /tmp/kraft-combined-logs; point it at the volume so data lands in ../data
     volumes:
-      - kafka-data:/var/lib/kafka/data
-volumes:
-  kafka-data:
+      # Bind mount: data lives in Kafka/data/ (git-ignored). Path is relative to this file.
+      # Container runs as appuser uid/gid 1000 -> the host folder must be writable by uid 1000.
+      - ../data:/var/lib/kafka/data

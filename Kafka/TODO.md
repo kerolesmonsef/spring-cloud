@@ -9,12 +9,18 @@ How to use this file:
 - Record numbers (throughput, latency, lag, recovery time) in the [Results log](#results-log) at the bottom.
 - Budget: ~5–8 h/week → ~12 weeks.
 
-Handy alias (saves typing — the CLI tools are not on `PATH` inside the container):
+Running the Kafka CLI — **no shortcut, type the full `docker exec` on purpose** (learning Docker + Kafka together). The tools are not on `PATH` inside the container, so use the full path:
 
 ```bash
-kbin() { docker exec -it kafka /opt/kafka/bin/"$@"; }      # single node
-# e.g. kbin kafka-topics.sh --bootstrap-server localhost:9092 --list
+docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+#      │    │   │     │                              └ args go to the Kafka tool
+#      │    │   │     └ full path to the script inside the container
+#      │    │   └ container name (`container_name:` in tools/docker-compose.single.yml)
+#      │    └ -i keep stdin open (type into producer) · -t allocate a terminal (drop -t when piping a file in)
+#      └ run a command inside an already-running container
 ```
+
+Bare tool names below (`kafka-topics.sh …`) mean: prefix with `docker exec -it kafka /opt/kafka/bin/`.
 
 ---
 
@@ -24,13 +30,19 @@ kbin() { docker exec -it kafka /opt/kafka/bin/"$@"; }      # single node
 - [x] Init Gradle module (Spring Boot 4.1.1, Java 17, `kafka-clients`), port **8096** registered in `../AGENTS.md`
 - [x] Pin broker image to `apache/kafka:4.3.1`, fix single-node `KAFKA_LOG_DIRS` so the volume is really used
 - [x] Smoke-test both compose files (done 2026-11-14 — see `AGENTS.md` → Verified facts)
-- [ ] Run `./gradlew build` yourself → green
-- [ ] `docker compose -f tools/docker-compose.single.yml up -d` → `docker logs kafka | grep "Kafka Server started"`
-- [ ] Add the `kbin` alias above to your shell
+- [x] Run `./gradlew build` yourself → green
+- [x] `docker compose -f tools/docker-compose.single.yml up -d` → `docker logs kafka | grep "Kafka Server started"`
+- [ ] Docker basics for this lab — run each, know what it shows:
+  - [ ] `docker ps` / `docker compose -f tools/docker-compose.single.yml ps` — what's running, ports, health
+  - [ ] `docker logs -f kafka` — follow broker logs (Ctrl+C to stop following)
+  - [ ] `docker exec -it kafka bash` → `ls /opt/kafka/bin` → `ls /var/lib/kafka/data` → `whoami` → `exit`
+  - [ ] `docker exec kafka env | grep KAFKA_` — the config the compose file injected
+  - [ ] `docker inspect kafka --format '{{json .Mounts}}'` — confirm `Kafka/data` bind mount
+  - [ ] `docker compose … stop` vs `down` vs `down -v` — which keeps data? (bind mount → `data/` survives all three)
 - [ ] Bookmark: [Kafka docs – Design](https://kafka.apache.org/documentation/#design) and [Implementation](https://kafka.apache.org/documentation/#implementation)
 - [ ] Get *Kafka: The Definitive Guide* (2nd ed.) — chapters are referenced below
 
-✅ **Checkpoint:** `kbin kafka-broker-api-versions.sh --bootstrap-server localhost:9092` prints the broker's supported APIs.
+✅ **Checkpoint:** `docker exec -it kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092` prints the broker's supported APIs — and you can explain every part of that command.
 
 ---
 
