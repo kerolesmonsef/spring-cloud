@@ -9,7 +9,7 @@ Go from Kafka beginner to master: how Kafka works inside (topics, partitions, lo
 ## Learner profile (gathered 2026-11-12)
 | Item | Answer |
 |---|---|
-| Kafka level | Self-rated **Beginner** — go step by step and skip nothing |
+| Kafka level | **Total beginner** — no messaging background (doesn't know topic / producer / consumer / RabbitMQ). Define every word before using it, one new term per step, never compare to tools not yet learned |
 | Language | **Java** (17, Spring Boot background) |
 | Pace | Hands-on, **5–8 hours/week** → ~12 weeks |
 | Focus areas | Internals · Streams/ksqlDB/Connect · Ops & Production · Patterns (exactly-once, transactions, schema registry, event sourcing, CQRS) |
@@ -26,6 +26,7 @@ Go from Kafka beginner to master: how Kafka works inside (topics, partitions, lo
 | `src/main/java/com/keroles/kafka/weekNN/` | Java code for week NN (one package per week). |
 | `labs/week_NN/` | Shell commands, lab write-ups, sample output for week NN. |
 | `notes/week_NN.md` | Personal notes: what I learned, what confused me. |
+| `kafka-notes.html` | Learner's quick-reference page (OneNote-friendly): words table, one section per tool with its params table, bookmark menu. |
 
 ## Build / run
 - Single Gradle module (Spring Boot 4.1.1, Java 17), not Maven. Run everything from this directory.
@@ -51,3 +52,5 @@ Go from Kafka beginner to master: how Kafka works inside (topics, partitions, lo
 - Do not move to the next week until the checkpoint is passed.
 - New host ports needed later (Schema Registry, Connect, ksqlDB, Prometheus, Grafana, Postgres…) must be checked against and added to the Used Ports table in `../AGENTS.md`.
 - Summarize what was done after each task.
+- `kafka-notes.html`: every CLI tool has its own **params table** (`Param | Description`, Required/Optional/Action marked) in its section. When a lesson uses a **new param** (or a new tool), add it to that tool's table (or create the table) in the same turn. List only params already taught — never pre-fill untaught ones.
+- Test every command on the live broker before teaching it; show the real output.

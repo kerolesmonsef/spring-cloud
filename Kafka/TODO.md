@@ -9,7 +9,7 @@ How to use this file:
 - Record numbers (throughput, latency, lag, recovery time) in the [Results log](#results-log) at the bottom.
 - Budget: ~5–8 h/week → ~12 weeks.
 
-Running the Kafka CLI — **no shortcut, type the full `docker exec` on purpose** (learning Docker + Kafka together). The tools are not on `PATH` inside the container, so use the full path:
+Running the Kafka CLI — plain `docker exec`, no alias. The tools are not on `PATH` inside the container, so use the full path:
 
 ```bash
 docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
@@ -32,39 +32,70 @@ Bare tool names below (`kafka-topics.sh …`) mean: prefix with `docker exec -it
 - [x] Smoke-test both compose files (done 2026-11-14 — see `AGENTS.md` → Verified facts)
 - [x] Run `./gradlew build` yourself → green
 - [x] `docker compose -f tools/docker-compose.single.yml up -d` → `docker logs kafka | grep "Kafka Server started"`
-- [ ] Docker basics for this lab — run each, know what it shows:
-  - [ ] `docker ps` / `docker compose -f tools/docker-compose.single.yml ps` — what's running, ports, health
-  - [ ] `docker logs -f kafka` — follow broker logs (Ctrl+C to stop following)
-  - [ ] `docker exec -it kafka bash` → `ls /opt/kafka/bin` → `ls /var/lib/kafka/data` → `whoami` → `exit`
-  - [ ] `docker exec kafka env | grep KAFKA_` — the config the compose file injected
-  - [ ] `docker inspect kafka --format '{{json .Mounts}}'` — confirm `Kafka/data` bind mount
-  - [ ] `docker compose … stop` vs `down` vs `down -v` — which keeps data? (bind mount → `data/` survives all three)
-- [ ] Bookmark: [Kafka docs – Design](https://kafka.apache.org/documentation/#design) and [Implementation](https://kafka.apache.org/documentation/#implementation)
-- [ ] Get *Kafka: The Definitive Guide* (2nd ed.) — chapters are referenced below
+- [x] Bookmark: [Kafka docs – Design](https://kafka.apache.org/documentation/#design) and [Implementation](https://kafka.apache.org/documentation/#implementation)
+- [x] Get *Kafka: The Definitive Guide* (2nd ed.) — chapters are referenced below
 
-✅ **Checkpoint:** `docker exec -it kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092` prints the broker's supported APIs — and you can explain every part of that command.
+✅ **Checkpoint:** `docker exec -it kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092` prints the broker's supported APIs.
 
 ---
 
 ## Phase 1 — Foundations
 
-### Week 1 — Foundations & CLI
-**Learn**
-- [ ] Event streaming vs a queue (RabbitMQ): Kafka keeps messages after they are read; consumers track their own position
-- [ ] Vocabulary — write a one-line definition of each in `notes/week_01.md`: broker, topic, partition, offset, record (key / value / headers / timestamp), consumer group, retention
-- [ ] The **commit log** idea: append-only, ordered, immutable
-- [ ] KRaft vs ZooKeeper — why Kafka 4.x removed ZooKeeper (KIP-500)
+### Week 1 — Foundations & CLI (zero knowledge assumed)
+One new word per step. Learn the word → run one command → see it with your own eyes → write one line in `notes/week_01.md`.
 
-**Lab** (`labs/week_01/`)
-- [ ] `kafka-topics.sh --create --topic orders --partitions 3` then `--describe`
-- [ ] Console producer with keys: `--reader-property parse.key=true --reader-property key.separator=:`
-- [ ] Console consumer showing partitions: `--from-beginning --formatter-property print.key=true --formatter-property print.partition=true --formatter-property print.offset=true`
-- [ ] Prove: the same key **always** lands in the same partition
-- [ ] Produce without keys — how are records spread now? (look up the "sticky partitioner")
-- [ ] Two consumers, **different** groups → both get everything. Two consumers, **same** group → they split the partitions
-- [ ] `docker exec kafka ls /var/lib/kafka/data/orders-0` — first look at segment files (you'll dissect them in week 4)
+**Step 1 — The problem Kafka solves**
+- [x] Understand: app A (e.g. "Order service") needs to tell apps B, C, D "an order was created". Instead of calling each one directly, A writes the news **once** into Kafka, and B, C, D read it from Kafka whenever they are ready. Kafka = a shared, ordered notebook between apps.
 
-✅ **Checkpoint:** Draw topic → partitions → offsets. Explain why ordering is guaranteed **only inside a partition**.
+**Step 2 — Message (record)**
+- [x] Understand: one piece of news, e.g. `order 42 created`. Kafka calls it a **record**.
+
+**Step 3 — Broker**
+- [x] Understand: the Kafka **server** that stores the records. Yours is the Docker container named `kafka`.
+- [x] Try: `docker ps` → see the `kafka` container running
+
+**Step 4 — Topic**
+- [x] Understand: a **named category** of records, like a folder or a DB table name. All order news goes in topic `orders`.
+- [x] Try: create it → `kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 3`
+- [x] Try: list topics → `kafka-topics.sh --bootstrap-server localhost:9092 --list`
+
+**Step 5 — Producer**
+- [x] Understand: any program that **writes** records into a topic.
+- [x] Try: `kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders` → type 3 lines, `Ctrl+C`
+
+**Step 6 — Consumer**
+- [x] Understand: any program that **reads** records from a topic.
+- [x] Try: `kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning` → see your 3 lines, `Ctrl+C`
+- [x] Try: run the same consumer again → the 3 lines are **still there**. Reading does not delete.
+
+**Step 7 — Offset**
+- [x] Understand: the **position number** of a record in the topic (0, 1, 2…). Like a line number. A consumer remembers "I read up to offset 2".
+- [x] Try: consumer + `--formatter-property print.offset=true` → see the numbers
+
+**Step 8 — Partition**
+- [ ] Understand: a topic is split into pieces called **partitions** so many machines can share the work. `orders` has 3 → partition 0, 1, 2. Each partition has its own offsets starting at 0.
+- [ ] Try: `kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic orders` → see 3 partitions
+- [ ] Try: on your host, `ls data/` → see folders `orders-0`, `orders-1`, `orders-2`
+
+**Step 9 — Key**
+- [ ] Understand: a record can carry a **key** (e.g. customer id). Same key → always the same partition → stays in order.
+- [ ] Try: producer with `--reader-property parse.key=true --reader-property key.separator=:` → type `ali:order1`, `ali:order2`, `sara:order3`
+- [ ] Try: consumer with `--formatter-property print.key=true --formatter-property print.partition=true --formatter-property print.offset=true` → all `ali` records sit in one partition
+
+**Step 10 — Consumer group**
+- [ ] Understand: consumers with the **same group name** act as one team and **split** the partitions. Different group names = independent readers, each gets **everything**.
+- [ ] Try: 2 terminals, both consumers with `--group g1` → records are split between them
+- [ ] Try: 2 terminals, one `--group g1`, one `--group g2` → both see all records
+
+**Step 11 — Retention**
+- [ ] Understand: if reading doesn't delete, what does? **Time/size limit** (default 7 days). Old records are dropped by age, not by being read.
+
+**Wrap-up**
+- [ ] `notes/week_01.md` has one line, in your own words, for: record, broker, topic, producer, consumer, offset, partition, key, consumer group, retention
+
+✅ **Checkpoint:** Draw topic → partitions → offsets on paper. Explain why order is guaranteed **only inside one partition**.
+
+> Later, not now: comparison with other queue tools (RabbitMQ), KRaft vs ZooKeeper, sticky partitioner, segment files (week 4).
 
 ### Week 2 — Producers & Consumers in Java
 **Learn**

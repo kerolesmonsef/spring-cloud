@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<!--
+  OneNote-friendly: light background, dark text, tables, bold + inline color.
+  Readability must survive with zero CSS (OneNote strips CSS on paste).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kafka Notes</title>
+<style>
+  :root {
+    --bg: #faf8f3;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --body: #374151;
+    --muted: #6b7280;
+    --line: #e5e1d8;
+    --panel: #f3f0e8;
+    --blue: #2563eb;
+    --green: #15803d;
+    --amber: #b45309;
+    --purple: #7e22ce;
+    --teal: #0f766e;
+    --rose: #be123c;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-behavior: smooth; }
+  body { max-width: 940px; margin: 0 auto; padding: 48px 28px 80px;
+    background: var(--bg);
+    font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    color: var(--body); line-height: 1.7; font-size: 16px; }
+
+  .eyebrow { font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--blue); font-weight: 700; margin: 0 0 8px; }
+  h1 { font-size: 38px; line-height: 1.15; font-weight: 800; color: var(--ink);
+    margin: 0 0 12px; letter-spacing: -.01em; }
+  .lede { font-size: 16.5px; color: var(--body); margin: 0 0 4px; }
+  .lede b { color: var(--ink); }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 26px 0 4px; }
+
+  h2 { font-size: 22px; font-weight: 700; color: var(--ink); margin: 52px 0 14px;
+    padding-left: 14px; border-left: 4px solid var(--blue); scroll-margin-top: 20px; }
+  h3 { font-size: 17px; font-weight: 700; color: var(--ink); margin: 28px 0 6px; }
+  p.note { color: var(--muted); font-size: 14.5px; margin: 8px 0 0; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px;
+    font-size: 15px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden; }
+  th { text-align: left; font-weight: 700; color: var(--ink); font-size: 12.5px;
+    letter-spacing: .06em; text-transform: uppercase; padding: 11px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.k { font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+  .w-broker   { color: var(--amber);  font-weight: 700; }
+  .w-topic    { color: var(--blue);   font-weight: 700; }
+  .w-producer { color: var(--green);  font-weight: 700; }
+  .w-record   { color: var(--purple); font-weight: 700; }
+  .w-consumer { color: var(--teal);   font-weight: 700; }
+  .w-offset   { color: var(--rose);   font-weight: 700; }
+
+  code, pre { font-family: Consolas, 'Courier New', monospace; }
+  code { font-size: 14px; color: var(--ink); background: var(--panel);
+    padding: 1px 6px; border-radius: 4px; }
+  pre { background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-left: 4px solid var(--green); border-radius: 10px; padding: 14px 16px;
+    font-size: 14px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;
+    word-break: break-word; margin: 10px 0 0; }
+  pre.out { border-left-color: var(--muted); color: var(--muted); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 6px 20px 18px; margin-top: 14px; box-shadow: 0 1px 2px rgba(31,41,55,.04); }
+
+  .toc { position: fixed; top: 48px; left: 20px; width: 200px; z-index: 10;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 8px 10px; box-shadow: 0 1px 3px rgba(31,41,55,.06);
+    user-select: none; -webkit-user-select: none; }
+  .toc-title { font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+    font-weight: 700; color: var(--muted); padding: 0 10px 8px; }
+  .toc a { display: block; padding: 7px 10px; margin: 2px 0; border-radius: 8px;
+    border-left: 3px solid transparent; color: var(--body); text-decoration: none;
+    font-size: 14px; line-height: 1.35; }
+  .toc a:hover { background: var(--panel); color: var(--ink); }
+  .toc a.on { background: var(--panel); color: var(--ink); font-weight: 700;
+    border-left-color: var(--blue); }
+  .toc a .n { color: var(--muted); font-weight: 600; margin-right: 6px; }
+  @media (max-width: 1320px) { .toc { display: none; } }
+  @media print { .toc { display: none; } }
+
+  @media (max-width: 560px) { body { font-size: 15px; padding: 28px 16px 60px; }
+    h1 { font-size: 29px; } }
+  @media print { html, body { background: #fff; } }
+</style>
+</head>
+<body>
+
+<nav class="toc" aria-label="Sections">
+  <div class="toc-title">Contents</div>
+  <a href="#words"><span class="n">1</span>The words</a>
+  <a href="#broker"><span class="n">2</span>Broker</a>
+  <a href="#topic"><span class="n">3</span>Topic</a>
+  <a href="#producer"><span class="n">4</span>Producer</a>
+  <a href="#consumer"><span class="n">5</span>Consumer</a>
+  <a href="#offset"><span class="n">6</span>Offset</a>
+</nav>
+
+<p class="eyebrow">Kafka &middot; Week 1 Quick Reference</p>
+<h1>Kafka notes, from zero</h1>
+<p class="lede">The words learned so far and the commands that go with them.
+Broker runs in Docker as container <code>kafka</code> on port <b>9092</b>.
+Every Kafka tool lives in <code>/opt/kafka/bin/</code> inside that container.</p>
+<hr class="rule">
+
+<h2 id="words">The words</h2>
+
+<table>
+  <thead>
+    <tr><th>Word</th><th>Meaning</th><th>Shop example</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="k"><span class="w-record">Record</span></td>
+      <td>One message, one piece of news.</td>
+      <td><i>&ldquo;order 42 created&rdquo;</i></td>
+    </tr>
+    <tr>
+      <td class="k"><span class="w-broker">Broker</span></td>
+      <td>The Kafka <b>server</b>. Stores records safely and hands them out to whoever asks.</td>
+      <td><i>Docker container <code>kafka</code>, port 9092</i></td>
+    </tr>
+    <tr>
+      <td class="k"><span class="w-topic">Topic</span></td>
+      <td>A <b>named box</b> inside the broker. Records of the same kind go in the same topic.</td>
+      <td><i>topic <code>orders</code> holds all order news</i></td>
+    </tr>
+    <tr>
+      <td class="k"><span class="w-producer">Producer</span></td>
+      <td>Any program that <b>writes</b> records into a topic.</td>
+      <td><i>Order service writes &ldquo;order 1 created&rdquo; into <code>orders</code></i></td>
+    </tr>
+    <tr>
+      <td class="k"><span class="w-consumer">Consumer</span></td>
+      <td>Any program that <b>reads</b> records from a topic. Reading does <b>not</b> delete.</td>
+      <td><i>Email service reads <code>orders</code> and sends &ldquo;thank you&rdquo; emails</i></td>
+    </tr>
+    <tr>
+      <td class="k"><span class="w-offset">Offset</span></td>
+      <td>The <b>position number</b> of a record (0, 1, 2&hellip;). Never changes, never reused. A <b>bookmark</b> so a consumer knows where it stopped.</td>
+      <td><i>Email service read up to offset 2 &rarr; after restart continues at 3</i></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>How they fit</h3>
+<table>
+  <thead>
+    <tr><th>Producer</th><th>&rarr;</th><th>Broker</th><th>Topic</th><th>Records inside</th><th>&rarr;</th><th>Consumer</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="k"><span class="w-producer">Order service</span></td>
+      <td><b>writes &rarr;</b></td>
+      <td><span class="w-broker">kafka :9092</span></td>
+      <td><span class="w-topic">orders</span></td>
+      <td>order 1 created<br>order 2 created<br>order 3 created</td>
+      <td><b>&rarr; reads</b></td>
+      <td class="k"><span class="w-consumer">Email service</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="broker">Broker &mdash; check it is running</h2>
+<pre>docker ps</pre>
+<p class="note">Look for a line with name <b>kafka</b> and <b>0.0.0.0:9092-&gt;9092/tcp</b>.</p>
+
+<h3>Every Kafka command starts the same way</h3>
+<table>
+  <thead><tr><th>Part</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>docker exec -it kafka</code></td><td>Run something inside the <code>kafka</code> container.</td></tr>
+    <tr><td class="k"><code>/opt/kafka/bin/&lt;tool&gt;.sh</code></td><td>Where Kafka's tools live inside the container.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="topic">Topic &mdash; create and list</h2>
+
+<h3>Create topic <code>orders</code></h3>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 3</pre>
+<pre class="out">Created topic orders.</pre>
+
+<h3>List all topics</h3>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</pre>
+<pre class="out">orders</pre>
+
+<h3>Describe topic <code>orders</code></h3>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic orders</pre>
+<pre class="out">Topic: orders  PartitionCount: 3  ReplicationFactor: 1 ...
+    Topic: orders  Partition: 0  Leader: 1  Replicas: 1  Isr: 1
+    Topic: orders  Partition: 1  Leader: 1  Replicas: 1  Isr: 1
+    Topic: orders  Partition: 2  Leader: 1  Replicas: 1  Isr: 1</pre>
+
+<h3 id="topics-params"><code>kafka-topics.sh</code> params</h3>
+<p class="note">Kafka's tool for managing topics. Pick <b>one</b> action: <code>--create</code>, <code>--list</code> or <code>--describe</code>.</p>
+<table>
+  <thead><tr><th>Param</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--bootstrap-server localhost:9092</code></td><td><b>Required.</b> Where the broker is (the door number).</td></tr>
+    <tr><td class="k"><code>--create</code></td><td>Action. Make a new topic. Needs <code>--topic</code>.</td></tr>
+    <tr><td class="k"><code>--list</code></td><td>Action. Show the names of all topics.</td></tr>
+    <tr><td class="k"><code>--describe</code></td><td>Action. Show details of a topic: how many partitions, and each one.</td></tr>
+    <tr><td class="k"><code>--topic orders</code></td><td>Which topic. Needed by <code>--create</code>; optional for <code>--describe</code> (without it: all topics).</td></tr>
+    <tr><td class="k"><code>--partitions 3</code></td><td>Optional, with <code>--create</code>. Split the topic into 3 pieces (partitions 0, 1, 2).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="producer">Producer &mdash; send records into a topic</h2>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</pre>
+<p class="note">A <b>&gt;</b> sign appears. Each line + <b>Enter</b> = one record sent. <b>Ctrl+C</b> to quit.</p>
+<pre class="out">&gt;order 1 created
+&gt;order 2 created
+&gt;order 3 created</pre>
+<p class="note">No &ldquo;saved&rdquo; message is printed &mdash; that is normal. To see the records you need a consumer (next step).</p>
+
+<h3 id="producer-params"><code>kafka-console-producer.sh</code> params</h3>
+<p class="note">Ready-made producer: you type, it sends.</p>
+<table>
+  <thead><tr><th>Param</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--bootstrap-server localhost:9092</code></td><td><b>Required.</b> Where the broker is.</td></tr>
+    <tr><td class="k"><code>--topic orders</code></td><td><b>Required.</b> Which topic to write into.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="consumer">Consumer &mdash; read records from a topic</h2>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</pre>
+<pre class="out">order 1 created
+order 2 created
+order 3 created</pre>
+<p class="note">The cursor then waits for new records. <b>Ctrl+C</b> to quit (may print <code>Processed a total of 3 messages</code>).</p>
+<p class="note">Run it <b>again</b> &rarr; same 3 lines. <b>Reading does not delete.</b> So Email, Warehouse and Invoice services can all read the same orders.</p>
+
+<h3 id="consumer-params"><code>kafka-console-consumer.sh</code> params</h3>
+<p class="note">Ready-made consumer: reads records and prints them.</p>
+<table>
+  <thead><tr><th>Param</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--bootstrap-server localhost:9092</code></td><td><b>Required.</b> Where the broker is.</td></tr>
+    <tr><td class="k"><code>--topic orders</code></td><td><b>Required.</b> Which topic to read from.</td></tr>
+    <tr><td class="k"><code>--from-beginning</code></td><td>Optional. Start from offset 0. Without it you only see <b>new</b> records sent after the consumer starts. Ignored once a <code>--group</code> already has a bookmark.</td></tr>
+    <tr><td class="k"><code>--group email-service</code></td><td>Optional. Give the consumer a name. The broker saves its bookmark under that name, so the next run continues <b>where it stopped</b>.</td></tr>
+    <tr><td class="k"><code>--formatter-property print.offset=true</code></td><td>Optional. Also print each record's offset (position number).</td></tr>
+    <tr><td class="k"><code>--formatter-property print.partition=true</code></td><td>Optional. Also print which partition (piece) the record is in.</td></tr>
+  </tbody>
+</table>
+<p class="note"><code>--formatter-property</code> changes <b>how</b> each record is printed. Repeat it once per setting.</p>
+
+<h3>Watch it live (two terminals)</h3>
+<table>
+  <thead><tr><th>Terminal</th><th>Do</th></tr></thead>
+  <tbody>
+    <tr><td class="k">1</td><td>Run the consumer command above. Leave it open.</td></tr>
+    <tr><td class="k">2</td><td>Run the producer, type <code>order 4 created</code>.</td></tr>
+    <tr><td class="k">Result</td><td>The line appears in terminal 1 instantly.</td></tr>
+  </tbody>
+</table>
+<p class="note">Producer and consumer never talk to each other. Both talk only to the broker.</p>
+
+<h2 id="offset">Offset &mdash; the position number of each record</h2>
+<table>
+  <thead><tr><th>Offset</th><th>Record</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><span class="w-offset">0</span></td><td>order 1 created</td></tr>
+    <tr><td class="k"><span class="w-offset">1</span></td><td>order 2 created</td></tr>
+    <tr><td class="k"><span class="w-offset">2</span></td><td>order 3 created</td></tr>
+    <tr><td class="k"><span class="w-offset">3</span></td><td><i>(next record goes here)</i></td></tr>
+  </tbody>
+</table>
+<p class="note">Like a line number in a notebook. Kafka gives each new record the next number.</p>
+
+<h3>See the offsets</h3>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning --formatter-property print.offset=true</pre>
+<pre class="out">Offset:0	order 1 created
+Offset:1	order 2 created
+Offset:2	order 3 created</pre>
+<p class="note">Params explained in the <a href="#consumer-params">consumer params table</a>.</p>
+
+<h3>Why it matters (shop)</h3>
+<table>
+  <thead><tr><th>Moment</th><th>Email service</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Before lunch</td><td>Reads offsets 0, 1, 2. Remembers <b>&ldquo;finished offset 2&rdquo;</b>.</td></tr>
+    <tr><td class="k">After restart</td><td>Continues at offset <b>3</b>. No duplicate email, no skipped order.</td></tr>
+  </tbody>
+</table>
+<h3>Offset is unique only inside ONE partition</h3>
+<p class="note">Topic <code>orders</code> has 3 pieces (partitions 0, 1, 2). <b>Each piece counts from 0 on its own.</b>
+So <code>Offset:0</code> can appear more than once &mdash; different piece, different record. Print the piece too:</p>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning --formatter-property print.partition=true --formatter-property print.offset=true</pre>
+<pre class="out">Partition:0	Offset:26	a7a
+Partition:0	Offset:27	koko
+Partition:2	Offset:0	hola
+Partition:2	Offset:1	a7a</pre>
+<p class="note">Real address of a record = <b>topic + partition + offset</b>, e.g. <code>orders / 2 / 0</code> = &ldquo;hola&rdquo;.</p>
+<p class="note">Do <b>not</b> press arrow keys in the producer: they are sent as junk records and can scramble the consumer's screen.</p>
+
+<h3>Continue from where it stopped &mdash; give the consumer a name</h3>
+<table>
+  <thead><tr><th>Command</th><th>Bookmark saved?</th><th>Starts at</th></tr></thead>
+  <tbody>
+    <tr><td class="k">no <code>--group</code>, no <code>--from-beginning</code></td><td>No</td><td>the end &rarr; only <b>new</b> records</td></tr>
+    <tr><td class="k">no <code>--group</code>, with <code>--from-beginning</code></td><td>No</td><td>offset 0 &mdash; <b>every</b> time</td></tr>
+    <tr><td class="k"><code>--group email-service</code></td><td><b>Yes</b>, saved in the broker</td><td>first run: as asked; later runs: <b>where it stopped</b></td></tr>
+  </tbody>
+</table>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --group email-service --from-beginning --formatter-property print.partition=true --formatter-property print.offset=true</pre>
+<p class="note">Run 1 &rarr; all records. Ctrl+C. Run 2 (same command) &rarr; <b>nothing</b> (already read). Send 1 new record &rarr; run 3 shows <b>only that one</b>.
+Once a group has a bookmark, <code>--from-beginning</code> is ignored.</p>
+<h3>See the saved bookmark</h3>
+<pre>docker exec -it kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group email-service</pre>
+
+<h3 id="groups-params"><code>kafka-consumer-groups.sh</code> params</h3>
+<p class="note">Kafka's tool for looking at named consumers (groups) and their bookmarks.</p>
+<table>
+  <thead><tr><th>Param</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--bootstrap-server localhost:9092</code></td><td><b>Required.</b> Where the broker is.</td></tr>
+    <tr><td class="k"><code>--describe</code></td><td>Action. Show the group's bookmark for each partition.</td></tr>
+    <tr><td class="k"><code>--group email-service</code></td><td>Which group (consumer name) to show.</td></tr>
+  </tbody>
+</table>
+
+<h3>Output columns</h3>
+<table>
+  <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td class="k">CURRENT-OFFSET</td><td>The bookmark: next offset this group will read.</td></tr>
+    <tr><td class="k">LOG-END-OFFSET</td><td>Offset the next new record will get.</td></tr>
+    <tr><td class="k">LAG</td><td>How many records are not read yet (end &minus; bookmark).</td></tr>
+  </tbody>
+</table>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    var targets = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    function mark() {
+      var cur = 0;
+      targets.forEach(function (t, i) { if (t && t.getBoundingClientRect().top < 140) cur = i; });
+      links.forEach(function (a, i) { a.classList.toggle('on', i === cur); });
+    }
+    window.addEventListener('scroll', mark, { passive: true });
+    mark();
+  })();
+</script>
+</body>
+</html>
